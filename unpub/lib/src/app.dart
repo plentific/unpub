@@ -23,6 +23,8 @@ import 'static/main.dart.js.dart' as main_dart_js;
 part 'app.g.dart';
 
 class App {
+  static const proxyOriginHeader = "proxy-origin";
+
   /// meta information store
   final MetaStore metaStore;
 
@@ -35,6 +37,9 @@ class App {
   /// http(s) proxy to call googleapis (to get uploader email)
   final String? googleapisProxy;
   final String? overrideUploaderEmail;
+
+  /// A forward proxy uri
+  final Uri? proxy_origin;
 
   /// validate if the package can be published
   ///
@@ -49,6 +54,7 @@ class App {
     this.googleapisProxy,
     this.overrideUploaderEmail,
     this.uploadValidator,
+    this.proxy_origin,
   });
 
   static shelf.Response _okWithJson(Map<String, dynamic> data) =>
@@ -75,6 +81,17 @@ class App {
       );
 
   http.Client? _googleapisClient;
+
+  String _resolveUrl(shelf.Request req, String reference) {
+    if (proxy_origin != null) {
+      return proxy_origin!.resolve(reference).toString();
+    }
+    String? proxyOriginInHeader = req.headers[proxyOriginHeader];
+    if (proxyOriginInHeader != null) {
+      return Uri.parse(proxyOriginInHeader).resolve(reference).toString();
+    }
+    return req.requestedUri.resolve(reference).toString();
+  }
 
   Future<String> _getUploaderEmail(shelf.Request req) async {
     if (overrideUploaderEmail != null) return overrideUploaderEmail!;
@@ -114,13 +131,11 @@ class App {
     return server;
   }
 
-  Map<String, dynamic> _versionToJson(UnpubVersion item, Uri baseUri) {
+  Map<String, dynamic> _versionToJson(UnpubVersion item, shelf.Request req) {
     var name = item.pubspec['name'] as String;
     var version = item.version;
     return {
-      'archive_url': baseUri
-          .resolve('/packages/$name/versions/$version.tar.gz')
-          .toString(),
+      'archive_url': _resolveUrl(req, '/packages/$name/versions/$version.tar.gz'),
       'pubspec': item.pubspec,
       'version': version,
     };
@@ -149,7 +164,7 @@ class App {
     });
 
     var versionMaps = package.versions
-        .map((item) => _versionToJson(item, req.requestedUri))
+        .map((item) => _versionToJson(item, req))
         .toList();
 
     return _okWithJson({
@@ -182,7 +197,7 @@ class App {
       return shelf.Response.notFound('Not Found');
     }
 
-    return _okWithJson(_versionToJson(packageVersion, req.requestedUri));
+    return _okWithJson(_versionToJson(packageVersion, req));
   }
 
   @Route.get('/packages/<name>/versions/<version>.tar.gz')
@@ -212,8 +227,7 @@ class App {
   @Route.get('/api/packages/versions/new')
   Future<shelf.Response> getUploadUrl(shelf.Request req) async {
     return _okWithJson({
-      'url': req.requestedUri
-          .resolve('/api/packages/versions/newUpload')
+      'url': _resolveUrl(req, '/api/packages/versions/newUpload')
           .toString(),
       'fields': {},
     });
@@ -327,12 +341,9 @@ class App {
       await metaStore.addVersion(name, unpubVersion);
 
       // TODO: Upload docs
-      return shelf.Response.found(req.requestedUri
-          .resolve('/api/packages/versions/newUploadFinish')
-          .toString());
+      return shelf.Response.found(_resolveUrl(req, '/api/packages/versions/newUploadFinish'));
     } catch (err) {
-      return shelf.Response.found(req.requestedUri
-          .resolve('/api/packages/versions/newUploadFinish?error=$err'));
+      return shelf.Response.found(_resolveUrl(req, '/api/packages/versions/newUploadFinish?error=$err'));
     }
   }
 
