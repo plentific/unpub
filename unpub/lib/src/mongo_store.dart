@@ -8,67 +8,99 @@ final statsCollection = 'stats';
 
 class MongoStore extends MetaStore {
   Db db;
+  Function()? onDatabaseError;
 
-  MongoStore(this.db);
+  MongoStore(this.db, {this.onDatabaseError});
 
   static SelectorBuilder _selectByName(String? name) => where.eq('name', name);
 
   Future<UnpubQueryResult> _queryPackagesBySelector(
       SelectorBuilder selector) async {
-    final count = await db.collection(packageCollection).count(selector);
-    final packages = await db
-        .collection(packageCollection)
-        .find(selector)
-        .map((item) => UnpubPackage.fromJson(item))
-        .toList();
-    return UnpubQueryResult(count, packages);
+    print(onDatabaseError != null);
+    try {
+      final count = await db.collection(packageCollection).count(selector);
+      final packages = await db
+          .collection(packageCollection)
+          .find(selector)
+          .map((item) => UnpubPackage.fromJson(item))
+          .toList();
+      return UnpubQueryResult(count, packages);
+    } catch (e) {
+      onDatabaseError?.call();
+      return Future.error(e);
+    }
   }
 
   @override
   queryPackage(name) async {
-    var json =
-        await db.collection(packageCollection).findOne(_selectByName(name));
-    if (json == null) return null;
-    return UnpubPackage.fromJson(json);
+    try {
+      var json =
+          await db.collection(packageCollection).findOne(_selectByName(name));
+      if (json == null) return null;
+      return UnpubPackage.fromJson(json);
+    } catch (e) {
+      onDatabaseError?.call();
+      return Future.error(e);
+    }
   }
 
   @override
   addVersion(name, version) async {
-    await db.collection(packageCollection).update(
-        _selectByName(name),
-        modify
-            .push('versions', version.toJson())
-            .addToSet('uploaders', version.uploader)
-            .setOnInsert('createdAt', version.createdAt)
-            .setOnInsert('private', true)
-            .setOnInsert('download', 0)
-            .set('updatedAt', version.createdAt),
-        upsert: true);
+    try {
+      await db.collection(packageCollection).update(
+          _selectByName(name),
+          modify
+              .push('versions', version.toJson())
+              .addToSet('uploaders', version.uploader)
+              .setOnInsert('createdAt', version.createdAt)
+              .setOnInsert('private', true)
+              .setOnInsert('download', 0)
+              .set('updatedAt', version.createdAt),
+          upsert: true);
+    } catch (e) {
+      onDatabaseError?.call();
+      return Future.error(e);
+    }
   }
 
   @override
   addUploader(name, email) async {
-    await db
-        .collection(packageCollection)
-        .update(_selectByName(name), modify.push('uploaders', email));
+    try {
+      await db
+          .collection(packageCollection)
+          .update(_selectByName(name), modify.push('uploaders', email));
+    } catch (e) {
+      onDatabaseError?.call();
+      return Future.error(e);
+    }
   }
 
   @override
   removeUploader(name, email) async {
-    await db
-        .collection(packageCollection)
-        .update(_selectByName(name), modify.pull('uploaders', email));
+    try {
+      await db
+          .collection(packageCollection)
+          .update(_selectByName(name), modify.pull('uploaders', email));
+    } catch (e) {
+      onDatabaseError?.call();
+      return Future.error(e);
+    }
   }
 
   @override
   increaseDownloads(name, version) {
-    var today = DateFormat('yyyyMMdd').format(DateTime.now());
-    db
-        .collection(packageCollection)
-        .update(_selectByName(name), modify.inc('download', 1));
-    db
-        .collection(statsCollection)
-        .update(_selectByName(name), modify.inc('d$today', 1));
+    try {
+      var today = DateFormat('yyyyMMdd').format(DateTime.now());
+      db
+          .collection(packageCollection)
+          .update(_selectByName(name), modify.inc('download', 1));
+      db
+          .collection(statsCollection)
+          .update(_selectByName(name), modify.inc('d$today', 1));
+    } catch (e) {
+      onDatabaseError?.call();
+      return;
+    }
   }
 
   @override
@@ -80,25 +112,30 @@ class MongoStore extends MetaStore {
     uploader,
     dependency,
   }) {
-    var selector =
-        where.sortBy(sort, descending: true).limit(size).skip(page * size);
+    try {
+      var selector =
+          where.sortBy(sort, descending: true).limit(size).skip(page * size);
 
-    if (keyword != null) {
-      selector = selector.match('name', '.*$keyword.*');
-    }
-    if (uploader != null) {
-      selector = selector.eq('uploaders', uploader);
-    }
-    if (dependency != null) {
-      selector = selector.raw({
-        'versions': {
-          r'$elemMatch': {
-            'pubspec.dependencies.$dependency': {r'$exists': true}
+      if (keyword != null) {
+        selector = selector.match('name', '.*$keyword.*');
+      }
+      if (uploader != null) {
+        selector = selector.eq('uploaders', uploader);
+      }
+      if (dependency != null) {
+        selector = selector.raw({
+          'versions': {
+            r'$elemMatch': {
+              'pubspec.dependencies.$dependency': {r'$exists': true}
+            }
           }
-        }
-      });
-    }
+        });
+      }
 
-    return _queryPackagesBySelector(selector);
+      return _queryPackagesBySelector(selector);
+    } catch (e) {
+      onDatabaseError?.call();
+      return Future.error(e);
+    }
   }
 }

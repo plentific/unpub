@@ -11,6 +11,7 @@ main(List<String> args) async {
   parser.addOption('database',
       abbr: 'd', defaultsTo: 'mongodb://localhost:27017/dart_pub');
   parser.addOption('proxy-origin', abbr: 'o', defaultsTo: '');
+  parser.addOption('exitOnDbError', abbr: 'e', defaultsTo: 'false');
 
   var results = parser.parse(args);
 
@@ -18,6 +19,7 @@ main(List<String> args) async {
   var port = int.parse(results['port'] as String);
   var dbUri = results['database'] as String;
   var proxy_origin = results['proxy-origin'] as String;
+  var exitOnDbError = (results['exitOnDbError'] as String?) == 'true';
 
   if (results.rest.isNotEmpty) {
     print('Got unexpected arguments: "${results.rest.join(' ')}".\n\nUsage:\n');
@@ -31,10 +33,11 @@ main(List<String> args) async {
   var baseDir = path.absolute('unpub-packages');
 
   var app = unpub.App(
-    metaStore: unpub.MongoStore(db),
-    packageStore: unpub.FileStore(baseDir),
-    proxy_origin: proxy_origin.trim().isEmpty ? null : Uri.parse(proxy_origin)
-  );
+      metaStore: unpub.MongoStore(db,
+          onDatabaseError: exitOnDbError ? () => exit(1) : null),
+      packageStore: unpub.FileStore(baseDir),
+      proxy_origin:
+          proxy_origin.trim().isEmpty ? null : Uri.parse(proxy_origin));
 
   var server = await app.serve(host, port);
   print('Serving at http://${server.address.host}:${server.port}');
