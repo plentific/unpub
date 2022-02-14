@@ -204,7 +204,7 @@ class App {
   Future<shelf.Response> download(
       shelf.Request req, String name, String version) async {
     var package = await metaStore.queryPackage(name);
-    if (package == null) {
+    if (package == null) {  
       return shelf.Response.found(Uri.parse(upstream)
           .resolve('/packages/$name/versions/$version.tar.gz')
           .toString());
@@ -504,6 +504,14 @@ class App {
   @Route.get('/packages/<name>')
   @Route.get('/packages/<name>/versions/<version>')
   Future<shelf.Response> indexHtml(shelf.Request req) async {
+    if(req.params.entries.join('/').contains('tar.gz')) {
+      final splittedVersion = req.requestedUri.pathSegments.last.split('-');
+      final name = splittedVersion[0];
+      final unpreparedVersion = splittedVersion[1];
+      final version = unpreparedVersion.substring(0, unpreparedVersion.length - 7);
+      return download(req, name, version);
+    }
+
     return shelf.Response.ok(index_html.content,
         headers: {HttpHeaders.contentTypeHeader: ContentType.html.mimeType});
   }
