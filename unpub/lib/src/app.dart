@@ -135,7 +135,8 @@ class App {
     var name = item.pubspec['name'] as String;
     var version = item.version;
     return {
-      'archive_url': _resolveUrl(req, '/packages/$name/versions/$version.tar.gz'),
+      'archive_url':
+          _resolveUrl(req, '/packages/$name/versions/$version.tar.gz'),
       'pubspec': item.pubspec,
       'version': version,
     };
@@ -155,7 +156,8 @@ class App {
 
     if (package == null) {
       return shelf.Response.found(
-          Uri.parse(upstream).resolve('/api/packages/$name').toString());
+        _resolveUrl(req, '/api/packages/$name'),
+      );
     }
 
     package.versions.sort((a, b) {
@@ -163,9 +165,8 @@ class App {
           semver.Version.parse(a.version), semver.Version.parse(b.version));
     });
 
-    var versionMaps = package.versions
-        .map((item) => _versionToJson(item, req))
-        .toList();
+    var versionMaps =
+        package.versions.map((item) => _versionToJson(item, req)).toList();
 
     return _okWithJson({
       'name': name,
@@ -186,9 +187,9 @@ class App {
 
     var package = await metaStore.queryPackage(name);
     if (package == null) {
-      return shelf.Response.found(Uri.parse(upstream)
-          .resolve('/api/packages/$name/versions/$version')
-          .toString());
+      return shelf.Response.found(
+        _resolveUrl(req, '/api/packages/$name/versions/$version'),
+      );
     }
 
     var packageVersion =
@@ -205,9 +206,9 @@ class App {
       shelf.Request req, String name, String version) async {
     var package = await metaStore.queryPackage(name);
     if (package == null) {
-      return shelf.Response.found(Uri.parse(upstream)
-          .resolve('/packages/$name/versions/$version.tar.gz')
-          .toString());
+      return shelf.Response.found(
+        _resolveUrl(req, '/packages/$name/versions/$version.tar.gz'),
+      );
     }
 
     if (isPubClient(req)) {
@@ -219,7 +220,10 @@ class App {
     } else {
       return shelf.Response.ok(
         packageStore.download(name, version),
-        headers: {HttpHeaders.contentTypeHeader: ContentType.binary.mimeType},
+        headers: {
+          ...req.headers,
+          ...{HttpHeaders.contentTypeHeader: ContentType.binary.mimeType}
+        },
       );
     }
   }
@@ -227,8 +231,7 @@ class App {
   @Route.get('/api/packages/versions/new')
   Future<shelf.Response> getUploadUrl(shelf.Request req) async {
     return _okWithJson({
-      'url': _resolveUrl(req, '/api/packages/versions/newUpload')
-          .toString(),
+      'url': _resolveUrl(req, '/api/packages/versions/newUpload').toString(),
       'fields': {},
     });
   }
@@ -341,9 +344,11 @@ class App {
       await metaStore.addVersion(name, unpubVersion);
 
       // TODO: Upload docs
-      return shelf.Response.found(_resolveUrl(req, '/api/packages/versions/newUploadFinish'));
+      return shelf.Response.found(
+          _resolveUrl(req, '/api/packages/versions/newUploadFinish'));
     } catch (err) {
-      return shelf.Response.found(_resolveUrl(req, '/api/packages/versions/newUploadFinish?error=$err'));
+      return shelf.Response.found(_resolveUrl(
+          req, '/api/packages/versions/newUploadFinish?error=$err'));
     }
   }
 
@@ -504,14 +509,24 @@ class App {
   @Route.get('/packages/<name>')
   @Route.get('/packages/<name>/versions/<version>')
   Future<shelf.Response> indexHtml(shelf.Request req) async {
-    return shelf.Response.ok(index_html.content,
-        headers: {HttpHeaders.contentTypeHeader: ContentType.html.mimeType});
+    return shelf.Response.ok(
+      index_html.content,
+      headers: {
+        ...req.headers,
+        ...{HttpHeaders.contentTypeHeader: ContentType.html.mimeType}
+      },
+    );
   }
 
   @Route.get('/main.dart.js')
   Future<shelf.Response> mainDartJs(shelf.Request req) async {
-    return shelf.Response.ok(main_dart_js.content,
-        headers: {HttpHeaders.contentTypeHeader: 'text/javascript'});
+    return shelf.Response.ok(
+      main_dart_js.content,
+      headers: {
+        ...req.headers,
+        ...{HttpHeaders.contentTypeHeader: 'text/javascript'}
+      },
+    );
   }
 
   String _getBadgeUrl(String label, String message, String color,
