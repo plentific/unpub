@@ -84,7 +84,9 @@ class App {
 
   String _resolveUrl(shelf.Request req, String reference) {
     if (proxy_origin != null) {
-      return proxy_origin!.resolve(reference).toString();
+      final proxyOriginUri = proxy_origin!.resolve(reference).toString();
+      print(proxyOriginUri);
+      return proxyOriginUri;
     }
     String? proxyOriginInHeader = req.headers[proxyOriginHeader];
     if (proxyOriginInHeader != null) {
@@ -205,6 +207,7 @@ class App {
   Future<shelf.Response> download(
       shelf.Request req, String name, String version) async {
     var package = await metaStore.queryPackage(name);
+    print('found package?: $package');
     if (package == null) {
       return shelf.Response.found(
         _resolveUrl(req, '/packages/$name/versions/$version.tar.gz'),
@@ -216,8 +219,10 @@ class App {
     }
 
     if (packageStore.supportsDownloadUrl) {
+      print('support download: ${packageStore.downloadUrl(name, version)}');
       return shelf.Response.found(packageStore.downloadUrl(name, version));
     } else {
+      print('not support download: ${packageStore.download(name, version)}');
       return shelf.Response.ok(
         packageStore.download(name, version),
         headers: {
@@ -506,9 +511,8 @@ class App {
 
   @Route.get('/')
   @Route.get('/packages')
-  @Route.get('/packages/<name>')
-  @Route.get('/packages/<name>/versions/<version>')
   Future<shelf.Response> indexHtml(shelf.Request req) async {
+    print('asdasd');
     return shelf.Response.ok(
       index_html.content,
       headers: {
