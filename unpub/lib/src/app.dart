@@ -303,7 +303,10 @@ class App {
         }
 
         // Check uploaders
-        if (package.uploaders?.contains(uploader) == false) {
+        final uploaderEmailDomain = uploader.split('@').last;
+        if (package.uploaders
+              ?.map((originalUploader) => originalUploader.split('@').last)
+              .contains(uploaderEmailDomain) == false) {
           throw '$uploader is not an uploader of $name';
         }
 
