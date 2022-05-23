@@ -19,6 +19,7 @@ pipeline {
     CLUSTER = "staging-uk-eks-k8s"
     CLUSTER_FOLDER = "staging-uk-eks-k8s"
     ARGOCD_SERVER = "argocd-staging-uk.plentific.com"
+    ARGOCD_OPTS = "--grpc-web"
     TASK = "deploy"
     JENKINS_SERVICE_ACCOUNT = "jenkins"
     JENKINS_URL_SUPPORT_INSTANCE = "https://jenkins.devops.plentific.com/"
