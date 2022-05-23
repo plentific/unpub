@@ -1,7 +1,7 @@
 const content = """<!DOCTYPE html>
 <html>
   <head>
-    <title>Unpub</title>
+    <title>Unpub - Plentific</title>
     <meta charset="utf-8" />
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
