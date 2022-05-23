@@ -18,7 +18,7 @@ pipeline {
     AWS_REGION = "eu-west-2"
     CLUSTER = "staging-uk-eks-k8s"
     CLUSTER_FOLDER = "staging-uk-eks-k8s"
-    ARGOCD_SERVER_HOST = "argocd-staging-uk.plentific.com"
+    ARGOCD_SERVER = "argocd-staging-uk.plentific.com"
     TASK = "deploy"
     JENKINS_SERVICE_ACCOUNT = "jenkins"
     JENKINS_URL_SUPPORT_INSTANCE = "https://jenkins.devops.plentific.com/"
