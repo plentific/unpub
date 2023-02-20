@@ -12,13 +12,13 @@ pipeline {
   }
 
   environment {
-    ECRURI = '583646779642.dkr.ecr.eu-west-2.amazonaws.com'
+    ECRURI = '583646779642.dkr.ecr.eu-west-1.amazonaws.com'
     APP = 'unpub'
-    AWS_ACCOUNT_ID = "583646779642"
-    AWS_REGION = "eu-west-2"
-    CLUSTER = "staging-uk-eks-k8s"
-    CLUSTER_FOLDER = "staging-uk-eks-k8s"
-    ARGOCD_SERVER = "argocd-staging-uk.plentific.com"
+    AWS_ACCOUNT_ID = "538623626928"
+    AWS_REGION = "eu-west-1"
+    CLUSTER = "devops-ie-eks-k8s"
+    CLUSTER_FOLDER = "devops-ie-eks-k8s"
+    ARGOCD_SERVER = "argocd.devops.plentific.com"
     ARGOCD_OPTS = "--grpc-web"
     TASK = "deploy"
     JENKINS_SERVICE_ACCOUNT = "jenkins"
@@ -56,7 +56,7 @@ pipeline {
       }
     }
 
-    stage ('3. Update git repository') {
+  /*  stage ('3. Update git repository') {
       when {
         expression { env.BRANCH_NAME == 'master' }
       }
@@ -128,7 +128,7 @@ pipeline {
       }
     }
 
-  }
+  }*/
 
   post {
     always {
