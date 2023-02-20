@@ -12,7 +12,7 @@ pipeline {
   }
 
   environment {
-    ECRURI = '583646779642.dkr.ecr.eu-west-1.amazonaws.com'
+    ECRURI = '538623626928.dkr.ecr.eu-west-1.amazonaws.com'
     APP = 'unpub'
     AWS_ACCOUNT_ID = "538623626928"
     AWS_REGION = "eu-west-1"
