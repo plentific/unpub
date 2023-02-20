@@ -39,9 +39,9 @@ pipeline {
     }
 
     stage ('2. Build unpub registry') {
-      when {
-        expression { env.BRANCH_NAME == 'feature/DEVOPS-2051' }
-      }
+      /*when {
+        expression { env.BRANCH_NAME == 'master' }
+      }*/
       steps {
         container('kaniko') {
           sh """
