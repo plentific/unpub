@@ -16,6 +16,7 @@ main(List<String> args) async {
   parser.addOption('roleArn', defaultsTo: '');
   parser.addOption('roleSessionName', defaultsTo: '');
   parser.addOption('webIdentityToken', defaultsTo: '');
+  parser.addOption('webIdentityTokenFile', defaultsTo: '');
   parser.addOption('bucketName', defaultsTo: '');
   parser.addOption('region', defaultsTo: '');
 
@@ -29,6 +30,7 @@ main(List<String> args) async {
   var roleArn = results['roleArn'] as String?;
   var roleSessionName = results['roleSessionName'] as String?;
   var webIdentityToken = results['webIdentityToken'] as String?;
+  var webIdentityTokenFile = results['webIdentityTokenFile'] as String?;
   var bucketName = results['bucketName'] as String?;
   var region = results['region'] as String?;
 
@@ -38,6 +40,7 @@ main(List<String> args) async {
     exit(1);
   }
 
+  final environment = Platform.environment;
   final db = Db(dbUri);
   await db.open();
 
@@ -48,9 +51,12 @@ main(List<String> args) async {
       roleSessionName: roleSessionName,
       webIdentityToken: webIdentityToken,
     );
+  } else if (webIdentityTokenFile != null || environment['AWS_WEB_IDENTITY_TOKEN_FILE'] != null) {
+    awsWebIdentity = await AwsWebIdentity.fromEnvFile(environment, webIdentityTokenFile);
   } else {
-    awsWebIdentity = AwsWebIdentity.fromEnv(Platform.environment);
+    awsWebIdentity = AwsWebIdentity.fromEnv(environment);
   }
+
   final s3storeIamStore = s3.S3StoreIamStore(
     webIdentity: awsWebIdentity,
     region: region,
