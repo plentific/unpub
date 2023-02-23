@@ -51,15 +51,18 @@ main(List<String> args) async {
   } else {
     awsWebIdentity = AwsWebIdentity.fromEnv(Platform.environment);
   }
+  final s3storeIamStore = s3.S3StoreIamStore(
+    webIdentity: awsWebIdentity,
+    region: region,
+    bucketName: bucketName,
+  );
 
   var app = unpub.App(
       metaStore: unpub.MongoStore(db, onDatabaseError: exitOnDbError ? () => exit(1) : null),
-      packageStore: s3.S3StoreIamStore(
-        webIdentity: awsWebIdentity,
-        region: region,
-        bucketName: bucketName,
-      ),
+      packageStore: s3storeIamStore,
       proxy_origin: proxyOrigin.trim().isEmpty ? null : Uri.parse(proxyOrigin));
+
+  await s3storeIamStore.init();
 
   var server = await app.serve(host, port);
   print('Serving at http://${server.address.host}:${server.port}');
