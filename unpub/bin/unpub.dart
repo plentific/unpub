@@ -13,11 +13,11 @@ main(List<String> args) async {
   parser.addOption('database', abbr: 'd', defaultsTo: 'mongodb://localhost:27017/dart_pub');
   parser.addOption('proxy-origin', abbr: 'o', defaultsTo: '');
   parser.addOption('exitOnDbError', abbr: 'e', defaultsTo: 'false');
-  parser.addOption('roleArn', defaultsTo: 'false');
-  parser.addOption('roleSessionName', defaultsTo: 'false');
-  parser.addOption('webIdentityToken', defaultsTo: 'false');
-  parser.addOption('bucketName', defaultsTo: 'false');
-  parser.addOption('region', defaultsTo: 'false');
+  parser.addOption('roleArn', defaultsTo: '');
+  parser.addOption('roleSessionName', defaultsTo: '');
+  parser.addOption('webIdentityToken', defaultsTo: '');
+  parser.addOption('bucketName', defaultsTo: '');
+  parser.addOption('region', defaultsTo: '');
 
   var results = parser.parse(args);
 
