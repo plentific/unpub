@@ -56,7 +56,7 @@ pipeline {
       }
     }
 
-  /*  stage ('3. Update git repository') {
+    stage ('3. Update git repository') {
       when {
         expression { env.BRANCH_NAME == 'master' }
       }
@@ -126,7 +126,7 @@ pipeline {
           }
         }
       }
-    } */
+    }
 
   }
 
