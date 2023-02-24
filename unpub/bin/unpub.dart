@@ -72,13 +72,15 @@ main(List<String> args) async {
   );
 
   var app = unpub.App(
-      metaStore: unpub.MongoStore(db,
-          onDatabaseError: exitOnDbError
-              ? () {
-                  print('Database error. Exiting...');
-                  exit(1);
-                }
-              : null),
+      metaStore: unpub.MongoStore(
+        db,
+        onDatabaseError: exitOnDbError
+            ? (error) {
+                print('Database error: $error Exiting...');
+                exit(1);
+              }
+            : null,
+      ),
       packageStore: s3storeIamStore,
       proxy_origin: proxyOrigin.trim().isEmpty ? null : Uri.parse(proxyOrigin));
 

@@ -8,7 +8,7 @@ final statsCollection = 'stats';
 
 class MongoStore extends MetaStore {
   Db db;
-  Function()? onDatabaseError;
+  Function(String)? onDatabaseError;
 
   MongoStore(this.db, {this.onDatabaseError});
 
@@ -16,7 +16,6 @@ class MongoStore extends MetaStore {
 
   Future<UnpubQueryResult> _queryPackagesBySelector(
       SelectorBuilder selector) async {
-    print(onDatabaseError != null);
     try {
       final count = await db.collection(packageCollection).count(selector);
       final packages = await db
@@ -26,7 +25,7 @@ class MongoStore extends MetaStore {
           .toList();
       return UnpubQueryResult(count, packages);
     } catch (e) {
-      onDatabaseError?.call();
+      onDatabaseError?.call(e.toString());
       return Future.error(e);
     }
   }
