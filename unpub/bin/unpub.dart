@@ -7,6 +7,7 @@ import 'package:unpub_aws/core/aws_web_identity.dart';
 import 'package:unpub_aws/s3/s3_sts_file_store.dart' as s3;
 
 main(List<String> args) async {
+  print('${DateTime.now()} App start');
   var parser = ArgParser();
   parser.addOption('host', abbr: 'h', defaultsTo: '0.0.0.0');
   parser.addOption('port', abbr: 'p', defaultsTo: '4000');
@@ -84,7 +85,10 @@ main(List<String> args) async {
       packageStore: s3storeIamStore,
       proxy_origin: proxyOrigin.trim().isEmpty ? null : Uri.parse(proxyOrigin));
 
+  print('Log (app): created app');
+
   await s3storeIamStore.init();
+  print('Log (app): initialized s3 store');
 
   var server = await app.serve(host, port);
   print('Serving at http://${server.address.host}:${server.port}');

@@ -49,6 +49,7 @@ class S3StoreIamStore extends PackageStore {
   Future<void> init() async {
     _credentialsRefreshStreamSubscription = _credentialsRefreshStreamController.stream.listen(
       (event) async {
+        print('Log (s3): added new expiration time $event');
         final now = DateTime.now();
         final timeDifferenceInSeconds = event.difference(now);
         await Future.delayed(timeDifferenceInSeconds);
@@ -69,7 +70,9 @@ class S3StoreIamStore extends PackageStore {
       webIdentityToken: webIdentity.webIdentityToken,
     );
     final credentials = stsResponse.credentials;
+    print('Log (s3): got credentials valid until: ${credentials?.expiration}');
     if (credentials == null) {
+      print('Log (s3): got emoty credentials');
       throw Exception('Got empty AWS credentials. Cannot initialize AWS client.');
     }
     _minio = Minio(
