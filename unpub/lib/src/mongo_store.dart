@@ -38,7 +38,7 @@ class MongoStore extends MetaStore {
       if (json == null) return null;
       return UnpubPackage.fromJson(json);
     } catch (e) {
-      onDatabaseError?.call();
+      onDatabaseError?.call(e.toString());
       return Future.error(e);
     }
   }
@@ -57,7 +57,7 @@ class MongoStore extends MetaStore {
               .set('updatedAt', version.createdAt),
           upsert: true);
     } catch (e) {
-      onDatabaseError?.call();
+      onDatabaseError?.call(e.toString());
       return Future.error(e);
     }
   }
@@ -69,7 +69,7 @@ class MongoStore extends MetaStore {
           .collection(packageCollection)
           .update(_selectByName(name), modify.push('uploaders', email));
     } catch (e) {
-      onDatabaseError?.call();
+      onDatabaseError?.call(e.toString());
       return Future.error(e);
     }
   }
@@ -81,7 +81,7 @@ class MongoStore extends MetaStore {
           .collection(packageCollection)
           .update(_selectByName(name), modify.pull('uploaders', email));
     } catch (e) {
-      onDatabaseError?.call();
+      onDatabaseError?.call(e.toString());
       return Future.error(e);
     }
   }
@@ -97,7 +97,7 @@ class MongoStore extends MetaStore {
           .collection(statsCollection)
           .update(_selectByName(name), modify.inc('d$today', 1));
     } catch (e) {
-      onDatabaseError?.call();
+      onDatabaseError?.call(e.toString());
       return;
     }
   }
@@ -133,7 +133,7 @@ class MongoStore extends MetaStore {
 
       return _queryPackagesBySelector(selector);
     } catch (e) {
-      onDatabaseError?.call();
+      onDatabaseError?.call(e.toString());
       return Future.error(e);
     }
   }
