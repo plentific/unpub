@@ -55,7 +55,12 @@ main(List<String> args) async {
     );
   } else if (webIdentityTokenFile?.isNotEmpty == true ||
       environment['AWS_WEB_IDENTITY_TOKEN_FILE']?.isNotEmpty == true) {
-    awsWebIdentity = await AwsWebIdentity.fromEnvFile(environment, webIdentityTokenFile);
+    awsWebIdentity = await AwsWebIdentity.fromEnvFile(
+      env: environment,
+      path: webIdentityTokenFile,
+      roleSessionName: roleSessionName,
+      roleArn: roleArn,
+    );
   } else {
     awsWebIdentity = AwsWebIdentity.fromEnv(environment);
   }
