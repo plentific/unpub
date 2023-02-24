@@ -42,8 +42,10 @@ main(List<String> args) async {
   }
 
   final environment = Platform.environment;
+  print('Log (app): before db open');
   final db = Db(dbUri);
   await db.open();
+  print('Log (app): after db open');
 
   late AwsWebIdentity awsWebIdentity;
   if (roleArn?.isNotEmpty == true &&
@@ -65,12 +67,14 @@ main(List<String> args) async {
   } else {
     awsWebIdentity = AwsWebIdentity.fromEnv(environment);
   }
+  print('Log (app): created aws web identity: ${awsWebIdentity.roleArn}');
 
   final s3storeIamStore = s3.S3StoreIamStore(
     webIdentity: awsWebIdentity,
     region: region,
     bucketName: bucketName,
   );
+  print('Log (app): created s3 store');
 
   var app = unpub.App(
       metaStore: unpub.MongoStore(
@@ -84,12 +88,12 @@ main(List<String> args) async {
       ),
       packageStore: s3storeIamStore,
       proxy_origin: proxyOrigin.trim().isEmpty ? null : Uri.parse(proxyOrigin));
-
   print('Log (app): created app');
 
   await s3storeIamStore.init();
   print('Log (app): initialized s3 store');
 
+  print('Log (app): serving server...');
   var server = await app.serve(host, port);
   print('Serving at http://${server.address.host}:${server.port}');
 }
