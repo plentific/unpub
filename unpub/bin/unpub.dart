@@ -1,8 +1,10 @@
 import 'dart:io';
-import 'package:path/path.dart' as path;
+
 import 'package:args/args.dart';
 import 'package:mongo_dart/mongo_dart.dart';
 import 'package:unpub/unpub.dart' as unpub;
+import 'package:unpub_aws/core/aws_web_identity.dart';
+import 'package:unpub_aws/s3/s3_sts_file_store.dart' as s3;
 
 main(List<String> args) async {
   var parser = ArgParser();
@@ -11,14 +13,26 @@ main(List<String> args) async {
   parser.addOption('database', abbr: 'd', defaultsTo: 'mongodb://localhost:27017/dart_pub');
   parser.addOption('proxy-origin', abbr: 'o', defaultsTo: '');
   parser.addOption('exitOnDbError', abbr: 'e', defaultsTo: 'false');
+  parser.addOption('roleArn', defaultsTo: '');
+  parser.addOption('roleSessionName', defaultsTo: '');
+  parser.addOption('webIdentityToken', defaultsTo: '');
+  parser.addOption('webIdentityTokenFile', defaultsTo: '');
+  parser.addOption('bucketName', defaultsTo: '');
+  parser.addOption('region', defaultsTo: '');
 
   var results = parser.parse(args);
 
   var host = results['host'] as String;
   var port = int.parse(results['port'] as String);
   var dbUri = results['database'] as String;
-  var proxy_origin = results['proxy-origin'] as String;
+  var proxyOrigin = results['proxy-origin'] as String;
   var exitOnDbError = (results['exitOnDbError'] as String?) == 'true';
+  var roleArn = results['roleArn'] as String?;
+  var roleSessionName = results['roleSessionName'] as String?;
+  var webIdentityToken = results['webIdentityToken'] as String?;
+  var webIdentityTokenFile = results['webIdentityTokenFile'] as String?;
+  var bucketName = results['bucketName'] as String?;
+  var region = results['region'] as String?;
 
   if (results.rest.isNotEmpty) {
     print('Got unexpected arguments: "${results.rest.join(' ')}".\n\nUsage:\n');
@@ -26,15 +40,35 @@ main(List<String> args) async {
     exit(1);
   }
 
+  final environment = Platform.environment;
   final db = Db(dbUri);
   await db.open();
 
-  var baseDir = path.absolute('unpub-packages');
+  late AwsWebIdentity awsWebIdentity;
+  if (roleArn != null && roleSessionName != null && webIdentityToken != null) {
+    awsWebIdentity = AwsWebIdentity(
+      roleArn: roleArn,
+      roleSessionName: roleSessionName,
+      webIdentityToken: webIdentityToken,
+    );
+  } else if (webIdentityTokenFile != null || environment['AWS_WEB_IDENTITY_TOKEN_FILE'] != null) {
+    awsWebIdentity = await AwsWebIdentity.fromEnvFile(environment, webIdentityTokenFile);
+  } else {
+    awsWebIdentity = AwsWebIdentity.fromEnv(environment);
+  }
+
+  final s3storeIamStore = s3.S3StoreIamStore(
+    webIdentity: awsWebIdentity,
+    region: region,
+    bucketName: bucketName,
+  );
 
   var app = unpub.App(
       metaStore: unpub.MongoStore(db, onDatabaseError: exitOnDbError ? () => exit(1) : null),
-      packageStore: unpub.FileStore(baseDir),
-      proxy_origin: proxy_origin.trim().isEmpty ? null : Uri.parse(proxy_origin));
+      packageStore: s3storeIamStore,
+      proxy_origin: proxyOrigin.trim().isEmpty ? null : Uri.parse(proxyOrigin));
+
+  await s3storeIamStore.init();
 
   var server = await app.serve(host, port);
   print('Serving at http://${server.address.host}:${server.port}');
