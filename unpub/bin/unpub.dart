@@ -44,10 +44,7 @@ main(List<String> args) async {
   final environment = Platform.environment;
   print('Log (app): before db open');
   final db = Db(dbUri);
-  await db.open(
-    secure: true,
-    tlsAllowInvalidCertificates: true,
-  );
+  await db.open();
   print('Log (app): after db open');
 
   late AwsWebIdentity awsWebIdentity;
