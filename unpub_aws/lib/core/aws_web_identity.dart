@@ -11,11 +11,18 @@ class AwsWebIdentity {
     required this.webIdentityToken,
   });
 
-  factory AwsWebIdentity.fromEnv(Map<String, String> env) => AwsWebIdentity(
-        roleArn: env['AWS_ROLE_ARN'] as String,
-        roleSessionName: env['AWS_ROLE_SESSION_NAME'] as String,
-        webIdentityToken: env['AWS_WEB_IDENTITY_TOKEN'] as String,
-      );
+  factory AwsWebIdentity.fromEnv(Map<String, String> env) {
+    if (env['AWS_ROLE_ARN'] == null ||
+        env['AWS_ROLE_SESSION_NAME'] == null ||
+        env['AWS_WEB_IDENTITY_TOKEN'] == null) {
+      throw ArgumentError('Web Identity Token path cannot be null.');
+    }
+    return AwsWebIdentity(
+      roleArn: env['AWS_ROLE_ARN'] as String,
+      roleSessionName: env['AWS_ROLE_SESSION_NAME'] as String,
+      webIdentityToken: env['AWS_WEB_IDENTITY_TOKEN'] as String,
+    );
+  }
 
   static Future<AwsWebIdentity> fromEnvFile(Map<String, String?> env, String? path) async {
     final tokenFilePath = path ?? env['AWS_WEB_IDENTITY_TOKEN_FILE'];

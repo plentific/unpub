@@ -45,13 +45,16 @@ main(List<String> args) async {
   await db.open();
 
   late AwsWebIdentity awsWebIdentity;
-  if (roleArn != null && roleSessionName != null && webIdentityToken != null) {
+  if (roleArn?.isNotEmpty == true &&
+      roleSessionName?.isNotEmpty == true &&
+      webIdentityToken?.isNotEmpty == true) {
     awsWebIdentity = AwsWebIdentity(
-      roleArn: roleArn,
-      roleSessionName: roleSessionName,
-      webIdentityToken: webIdentityToken,
+      roleArn: roleArn!,
+      roleSessionName: roleSessionName!,
+      webIdentityToken: webIdentityToken!,
     );
-  } else if (webIdentityTokenFile != null || environment['AWS_WEB_IDENTITY_TOKEN_FILE'] != null) {
+  } else if (webIdentityTokenFile?.isNotEmpty == true ||
+      environment['AWS_WEB_IDENTITY_TOKEN_FILE']?.isNotEmpty == true) {
     awsWebIdentity = await AwsWebIdentity.fromEnvFile(environment, webIdentityTokenFile);
   } else {
     awsWebIdentity = AwsWebIdentity.fromEnv(environment);
