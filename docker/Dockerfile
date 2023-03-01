@@ -1,4 +1,4 @@
-FROM google/dart:2.15.1
+FROM google/dart:2.18.6
 
 COPY . /app
 
