@@ -4,6 +4,7 @@ import 'package:args/args.dart';
 import 'package:mongo_dart/mongo_dart.dart';
 import 'package:unpub/unpub.dart' as unpub;
 import 'package:unpub_aws/core/aws_web_identity.dart';
+import 'package:unpub_aws/meta_store/dynamodb_meta_store.dart';
 import 'package:unpub_aws/s3/s3_sts_file_store.dart' as s3;
 
 main(List<String> args) async {
@@ -74,20 +75,14 @@ main(List<String> args) async {
     region: region,
     bucketName: bucketName,
   );
+  final dynamodbStore = DynamoDBMetaStore();
   print('Log (app): created s3 store');
 
   var app = unpub.App(
-      metaStore: unpub.MongoStore(
-        db,
-        onDatabaseError: exitOnDbError
-            ? (error) {
-                print('Database error: $error Exiting...');
-                exit(1);
-              }
-            : null,
-      ),
-      packageStore: s3storeIamStore,
-      proxy_origin: proxyOrigin.trim().isEmpty ? null : Uri.parse(proxyOrigin));
+    metaStore: dynamodbStore,
+    packageStore: s3storeIamStore,
+    proxy_origin: proxyOrigin.trim().isEmpty ? null : Uri.parse(proxyOrigin),
+  );
   print('Log (app): created app');
 
   await s3storeIamStore.init();
