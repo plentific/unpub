@@ -2,34 +2,39 @@ import 'package:aws_dynamodb_api/dynamodb-2012-08-10.dart';
 import 'package:unpub/unpub.dart';
 
 class DynamoDBMetaStore extends MetaStore {
-  final client = DynamoDB(
-    region: 'eu-west-1',
-    endpointUrl: "http://localhost:8000",
-    credentials: AwsClientCredentials(accessKey: "dummy", secretKey: "dummy"),
-  );
+  DynamoDBMetaStore({
+    required String endpointUrl,
+    this.tableName,
+  }) : client = DynamoDB(
+          region: 'eu-west-1',
+          endpointUrl: endpointUrl,
+        );
 
+  final tableName;
+
+  final DynamoDB client;
   @override
   Future<void> addVersion(String name, UnpubVersion version) async {
-    await _createTable();
+    // await _createTable();
 
     await client.updateItem(
       key: {
-        'name': AttributeValue(n: name),
+        'name': AttributeValue(s: '1'),
       },
       attributeUpdates: {
         'versions': AttributeValueUpdate(
-          action: AttributeAction.add,
+          action: AttributeAction.put,
           value: AttributeValue(
             m: version.toJson().map(
                   (key, value) => MapEntry(
                     key,
-                    AttributeValue(n: value),
+                    AttributeValue(s: value.toString()),
                   ),
                 ),
           ),
         ),
         'uploaders': AttributeValueUpdate(
-          action: AttributeAction.add,
+          action: AttributeAction.put,
           value: AttributeValue(s: version.uploader),
         ),
         'createdAt': AttributeValueUpdate(
@@ -49,7 +54,7 @@ class DynamoDBMetaStore extends MetaStore {
           value: AttributeValue(s: version.createdAt.toIso8601String()),
         ),
       },
-      tableName: 'tableName',
+      tableName: tableName,
     );
   }
 
@@ -57,7 +62,7 @@ class DynamoDBMetaStore extends MetaStore {
     final attributeDefinitions = <AttributeDefinition>[
       AttributeDefinition(
         attributeName: "name",
-        attributeType: ScalarAttributeType.n,
+        attributeType: ScalarAttributeType.s,
       ),
     ];
 
@@ -71,7 +76,8 @@ class DynamoDBMetaStore extends MetaStore {
     await client.createTable(
       attributeDefinitions: attributeDefinitions,
       keySchema: keySchema,
-      tableName: 'tableName',
+      tableName: tableName,
+      provisionedThroughput: ProvisionedThroughput(readCapacityUnits: 20, writeCapacityUnits: 20),
     );
   }
 
@@ -98,6 +104,10 @@ class DynamoDBMetaStore extends MetaStore {
       String? keyword,
       String? uploader,
       String? dependency}) async {
+    final x = await client.scan(
+      tableName: tableName,
+    );
+    print(x.items.toString());
     return UnpubQueryResult(0, []);
   }
 

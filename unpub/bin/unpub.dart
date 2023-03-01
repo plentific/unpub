@@ -3,9 +3,10 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:mongo_dart/mongo_dart.dart';
 import 'package:unpub/unpub.dart' as unpub;
+import 'package:unpub/unpub.dart';
 import 'package:unpub_aws/core/aws_web_identity.dart';
 import 'package:unpub_aws/meta_store/dynamodb_meta_store.dart';
-import 'package:unpub_aws/s3/s3_sts_file_store.dart' as s3;
+import 'package:unpub_aws/package_store/s3_sts_file_store.dart';
 
 main(List<String> args) async {
   print('${DateTime.now()} App start');
@@ -21,6 +22,8 @@ main(List<String> args) async {
   parser.addOption('webIdentityTokenFile', defaultsTo: '');
   parser.addOption('bucketName', defaultsTo: '');
   parser.addOption('region', defaultsTo: '');
+  parser.addOption('dynamoDbUrl', defaultsTo: '');
+  parser.addOption('dynamoDbTableName', defaultsTo: '');
 
   var results = parser.parse(args);
 
@@ -35,6 +38,8 @@ main(List<String> args) async {
   var webIdentityTokenFile = results['webIdentityTokenFile'] as String?;
   var bucketName = results['bucketName'] as String?;
   var region = results['region'] as String?;
+  var dynamoDbUrl = results['dynamoDbUrl'] as String?;
+  var dynamoDbTableName = results['dynamoDbTableName'] as String?;
 
   if (results.rest.isNotEmpty) {
     print('Got unexpected arguments: "${results.rest.join(' ')}".\n\nUsage:\n');
@@ -70,12 +75,19 @@ main(List<String> args) async {
   }
   print('Log (app): created aws web identity: ${awsWebIdentity.roleArn}');
 
-  final s3storeIamStore = s3.S3StoreIamStore(
+  final dynamodbStore = DynamoDBMetaStore(endpointUrl: dynamoDbUrl!, tableName: dynamoDbTableName);
+  print('Log (app): created DynamoDB store');
+  await dynamodbStore.addVersion(
+    'test',
+    UnpubVersion('version', {}, 'pubspecYaml', 'uploader', 'readme', 'changelog', DateTime.now()),
+  );
+  print('Log (app): added test version to meta store');
+  await dynamodbStore.queryPackages(size: 10, page: 0, sort: '');
+  final s3storeIamStore = S3StoreIamStore(
     webIdentity: awsWebIdentity,
     region: region,
     bucketName: bucketName,
   );
-  final dynamodbStore = DynamoDBMetaStore();
   print('Log (app): created s3 store');
 
   var app = unpub.App(
