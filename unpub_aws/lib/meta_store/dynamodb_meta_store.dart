@@ -15,7 +15,7 @@ class DynamoDBMetaStore extends MetaStore {
   final DynamoDB client;
   @override
   Future<void> addVersion(String name, UnpubVersion version) async {
-    // await _createTable();
+    await _createTable();
 
     await client.updateItem(
       key: {

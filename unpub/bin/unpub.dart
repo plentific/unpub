@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:mongo_dart/mongo_dart.dart';
 import 'package:unpub/unpub.dart' as unpub;
 import 'package:unpub/unpub.dart';
 import 'package:unpub_aws/core/aws_web_identity.dart';
@@ -48,10 +47,6 @@ main(List<String> args) async {
   }
 
   final environment = Platform.environment;
-  print('Log (app): before db open');
-  final db = Db(dbUri);
-  await db.open();
-  print('Log (app): after db open');
 
   late AwsWebIdentity awsWebIdentity;
   if (roleArn?.isNotEmpty == true &&
@@ -75,14 +70,18 @@ main(List<String> args) async {
   }
   print('Log (app): created aws web identity: ${awsWebIdentity.roleArn}');
 
+  print('Log (app): before db open');
   final dynamodbStore = DynamoDBMetaStore(endpointUrl: dynamoDbUrl!, tableName: dynamoDbTableName);
   print('Log (app): created DynamoDB store');
+
+  print('Log (app): adding test version');
   await dynamodbStore.addVersion(
     'test',
     UnpubVersion('version', {}, 'pubspecYaml', 'uploader', 'readme', 'changelog', DateTime.now()),
   );
   print('Log (app): added test version to meta store');
-  await dynamodbStore.queryPackages(size: 10, page: 0, sort: '');
+  final packages = await dynamodbStore.queryPackages(size: 10, page: 0, sort: '');
+  print('Log (app): packages: $packages');
   final s3storeIamStore = S3StoreIamStore(
     webIdentity: awsWebIdentity,
     region: region,
