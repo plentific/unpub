@@ -48,6 +48,35 @@ main(List<String> args) async {
 
   final environment = Platform.environment;
 
+  // DEBUG PRINTS
+  print('env variables:');
+  var awsWebIdentitityTokenFileFromEnv = environment['AWS_WEB_IDENTITY_TOKEN_FILE'];
+  var awsRoleArnFromEnv = environment['AWS_ROLE_ARN'];
+  var awsRoleSessionNameEnv = environment['AWS_ROLE_SESSION_NAME'];
+  var awsWebIdentitityTokenFromEnv = environment['AWS_WEB_IDENTITY_TOKEN'];
+  print('AWS_WEB_IDENTITY_TOKEN_FILE: $awsWebIdentitityTokenFileFromEnv');
+  print('AWS_ROLE_ARN: $awsRoleArnFromEnv');
+  print('AWS_ROLE_SESSION_NAME: $awsRoleSessionNameEnv');
+  print('AWS_WEB_IDENTITY_TOKEN: $awsWebIdentitityTokenFromEnv');
+  print('---');
+
+  print('args variables:');
+  print('host: $host');
+  print('port: $port');
+  print('dbUri: $dbUri');
+  print('proxyOrigin: $proxyOrigin');
+  print('exitOnDbError: $exitOnDbError');
+  print('roleArn: $roleArn');
+  print('roleSessionName: $roleSessionName');
+  print('webIdentityToken: $webIdentityToken');
+  print('webIdentityTokenFile: $webIdentityTokenFile');
+  print('bucketName: $bucketName');
+  print('region: $region');
+  print('dynamoDbUrl: $dynamoDbUrl');
+  print('dynamoDbTableName: $dynamoDbTableName');
+  print('---');
+  // end of DEBUG PRINTS
+
   late AwsWebIdentity awsWebIdentity;
   if (roleArn?.isNotEmpty == true &&
       roleSessionName?.isNotEmpty == true &&
