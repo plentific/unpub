@@ -77,6 +77,19 @@ main(List<String> args) async {
   print('---');
   // end of DEBUG PRINTS
 
+  print('Log (app): before db open');
+  final dynamodbStore = DynamoDBMetaStore(endpointUrl: dynamoDbUrl!, tableName: dynamoDbTableName);
+  print('Log (app): created DynamoDB store');
+
+  print('Log (app): adding test version');
+  await dynamodbStore.addVersion(
+    'test',
+    UnpubVersion('version', {}, 'pubspecYaml', 'uploader', 'readme', 'changelog', DateTime.now()),
+  );
+  print('Log (app): added test version to meta store');
+  final packages = await dynamodbStore.queryPackages(size: 10, page: 0, sort: '');
+  print('Log (app): packages: $packages');
+
   late AwsWebIdentity awsWebIdentity;
   if (roleArn?.isNotEmpty == true &&
       roleSessionName?.isNotEmpty == true &&
@@ -99,18 +112,6 @@ main(List<String> args) async {
   }
   print('Log (app): created aws web identity: ${awsWebIdentity.roleArn}');
 
-  print('Log (app): before db open');
-  final dynamodbStore = DynamoDBMetaStore(endpointUrl: dynamoDbUrl!, tableName: dynamoDbTableName);
-  print('Log (app): created DynamoDB store');
-
-  print('Log (app): adding test version');
-  await dynamodbStore.addVersion(
-    'test',
-    UnpubVersion('version', {}, 'pubspecYaml', 'uploader', 'readme', 'changelog', DateTime.now()),
-  );
-  print('Log (app): added test version to meta store');
-  final packages = await dynamodbStore.queryPackages(size: 10, page: 0, sort: '');
-  print('Log (app): packages: $packages');
   final s3storeIamStore = S3StoreIamStore(
     webIdentity: awsWebIdentity,
     region: region,
