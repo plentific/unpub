@@ -60,6 +60,8 @@ main(List<String> args) async {
   print('AWS_WEB_IDENTITY_TOKEN: $awsWebIdentitityTokenFromEnv');
   print('---');
 
+  print('hello test :)');
+
   print('args variables:');
   print('host: $host');
   print('port: $port');
