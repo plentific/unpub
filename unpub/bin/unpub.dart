@@ -54,7 +54,7 @@ Future<MongoStore> _createAndInitMongoDbStore(String dbUri, bool exitOnDbError) 
   );
   await mongoDbStore.db.open(
     secure: true,
-    tlsAllowInvalidCertificates: true,
+    // tlsAllowInvalidCertificates: true,
   );
   return mongoDbStore;
 }
