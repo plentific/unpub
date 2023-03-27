@@ -22,6 +22,7 @@ main(List<String> arguments) async {
   final bucketName = args['bucketName'] as String?;
   final region = args['region'] as String?;
 
+  final mongoDbStore = await _createAndInitMongoDbStore(dbUri, exitOnDbError);
   final awsStore = await _createAndInitS3Store(
     roleArn: roleArn,
     roleSessionName: roleSessionName,
@@ -31,7 +32,6 @@ main(List<String> arguments) async {
     region: region,
     bucketName: bucketName,
   );
-  final mongoDbStore = await _createAndInitMongoDbStore(dbUri, exitOnDbError);
 
   final app = unpub.App(
     metaStore: mongoDbStore,
