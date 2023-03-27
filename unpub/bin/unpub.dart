@@ -21,8 +21,17 @@ main(List<String> arguments) async {
   final webIdentityTokenFile = args['webIdentityTokenFile'] as String?;
   final bucketName = args['bucketName'] as String?;
   final region = args['region'] as String?;
+  final tlsCAFile = args['tlsCAFile'] as String?;
+  final tlsCertificateKeyFile = args['tlsCertificateKeyFile'] as String?;
+  final tlsCertificateKeyFilePassword = args['tlsCertificateKeyFilePassword'] as String?;
 
-  final mongoDbStore = await _createAndInitMongoDbStore(dbUri, exitOnDbError);
+  final mongoDbStore = await _createAndInitMongoDbStore(
+    dbUri,
+    exitOnDbError,
+    tlsCAFile: tlsCAFile,
+    tlsCertificateKeyFile: tlsCertificateKeyFile,
+    tlsCertificateKeyFilePassword: tlsCertificateKeyFilePassword,
+  );
   final awsStore = await _createAndInitS3Store(
     roleArn: roleArn,
     roleSessionName: roleSessionName,
@@ -42,7 +51,13 @@ main(List<String> arguments) async {
   print('Serving at http://${server.address.host}:${server.port}');
 }
 
-Future<MongoStore> _createAndInitMongoDbStore(String dbUri, bool exitOnDbError) async {
+Future<MongoStore> _createAndInitMongoDbStore(
+  String dbUri,
+  bool exitOnDbError, {
+  String? tlsCAFile,
+  String? tlsCertificateKeyFile,
+  String? tlsCertificateKeyFilePassword,
+}) async {
   final mongoDbStore = MongoStore(
     Db(dbUri),
     onDatabaseError: exitOnDbError
@@ -52,10 +67,22 @@ Future<MongoStore> _createAndInitMongoDbStore(String dbUri, bool exitOnDbError) 
           }
         : null,
   );
-  await mongoDbStore.db.open(
-    secure: true,
-    // tlsAllowInvalidCertificates: true,
-  );
+
+  if (tlsCAFile?.isNotEmpty == true && tlsCertificateKeyFile?.isNotEmpty == true) {
+    print('Connecting to database using CA file from path: $tlsCAFile');
+    await mongoDbStore.db.open(
+      secure: true,
+      tlsCAFile: tlsCAFile,
+      tlsCertificateKeyFile: tlsCertificateKeyFile,
+      tlsCertificateKeyFilePassword: tlsCertificateKeyFilePassword,
+    );
+  } else {
+    print('Connecting to database using not secure connection');
+    await mongoDbStore.db.open(
+      secure: false,
+    );
+  }
+
   return mongoDbStore;
 }
 
@@ -74,6 +101,9 @@ ArgResults _parseArgs(List<String> args) {
   parser.addOption('region', defaultsTo: '');
   parser.addOption('dynamoDbUrl', defaultsTo: '');
   parser.addOption('dynamoDbTableName', defaultsTo: '');
+  parser.addOption('tlsCAFile', defaultsTo: '');
+  parser.addOption('tlsCertificateKeyFile', defaultsTo: '');
+  parser.addOption('tlsCertificateKeyFilePassword', defaultsTo: '');
 
   final arguments = parser.parse(args);
   if (arguments.rest.isNotEmpty) {
