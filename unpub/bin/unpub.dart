@@ -68,7 +68,7 @@ Future<MongoStore> _createAndInitMongoDbStore(
         : null,
   );
 
-  if (tlsCAFile?.isNotEmpty == true && tlsCertificateKeyFile?.isNotEmpty == true) {
+  if (tlsCAFile?.isNotEmpty == true) {
     print('Connecting to database using CA file from path: $tlsCAFile');
     await mongoDbStore.db.open(
       secure: true,
