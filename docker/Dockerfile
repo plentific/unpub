@@ -4,9 +4,7 @@ COPY . /app
 COPY docker/entrypoint.sh /app/entrypoint.sh
 
 # Download CA for DocumentDB
-RUN curl -LJO https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
-COPY global-bundle.pem /app/ca.pem
-ARG CA_FILE=/app/ca.pem
+RUN curl -LJO https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem -o /app/ca.pem
 
 # Download app dependencies 
 WORKDIR /app/unpub
