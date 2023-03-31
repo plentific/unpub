@@ -73,8 +73,9 @@ Future<MongoStore> _createAndInitMongoDbStore(
     await mongoDbStore.db.open(
       secure: true,
       tlsCAFile: tlsCAFile,
-      tlsCertificateKeyFile: tlsCertificateKeyFile,
-      tlsCertificateKeyFilePassword: tlsCertificateKeyFilePassword,
+      tlsCertificateKeyFile: tlsCertificateKeyFile?.isNotEmpty == true ? tlsCertificateKeyFile : null,
+      tlsCertificateKeyFilePassword:
+          tlsCertificateKeyFilePassword?.isNotEmpty == true ? tlsCertificateKeyFilePassword : null,
     );
   } else {
     print('Connecting to database using not secure connection');
