@@ -92,7 +92,7 @@ ArgResults _parseArgs(List<String> args, Map<String, dynamic> environment) {
   parser.addOption('host', abbr: 'h', defaultsTo: '0.0.0.0');
   parser.addOption('port', abbr: 'p', defaultsTo: '4000');
   parser.addOption('database', abbr: 'd', defaultsTo: 'mongodb://localhost:27017/dart_pub');
-  parser.addOption('proxy-origin', abbr: 'o', defaultsTo: '');
+  parser.addOption('proxy-origin', abbr: 'o', defaultsTo: 'false');
   parser.addOption('exitOnDbError', abbr: 'e', defaultsTo: 'false');
   parser.addOption('roleArn', defaultsTo: environment['AWS_ROLE_ARN']);
   parser.addOption('roleSessionName', defaultsTo: 'sessionName');
@@ -100,9 +100,9 @@ ArgResults _parseArgs(List<String> args, Map<String, dynamic> environment) {
   parser.addOption('webIdentityTokenFile', defaultsTo: environment['AWS_WEB_IDENTITY_TOKEN_FILE']);
   parser.addOption('bucketName', defaultsTo: environment['AWS_BUCKET_NAME']);
   parser.addOption('region', defaultsTo: environment['AWS_REGION']);
-  parser.addOption('tlsCAFile', defaultsTo: '');
-  parser.addOption('tlsCertificateKeyFile', defaultsTo: '');
-  parser.addOption('tlsCertificateKeyFilePassword', defaultsTo: '');
+  parser.addOption('tlsCAFile');
+  parser.addOption('tlsCertificateKeyFile');
+  parser.addOption('tlsCertificateKeyFilePassword');
 
   final arguments = parser.parse(args);
   if (arguments.rest.isNotEmpty) {
@@ -145,7 +145,7 @@ Future<S3StoreIamStore> _createAndInitS3Store({
   final s3storeIamStore = S3StoreIamStore(
     webIdentity: awsWebIdentity,
     region: region,
-    bucketName: bucketName,
+    bucketName: bucketName ?? 'testRegion',
   );
   await s3storeIamStore.init();
 
