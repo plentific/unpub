@@ -23,7 +23,7 @@ dependencies:
   json_annotation: ^4.8.0
   # mongo_dart: ^0.9.1
   mongo_dart:
-    git: git@github.com:jakubjodelka/mongo_dart.git
+    git: https://github.com/jakubjodelka/mongo_dart.git
     # path: /Users/jakubjodelka/Documents/Programming/Plentific/mongo_dart
   mime: ^1.0.0
   intl: ^0.17.0
