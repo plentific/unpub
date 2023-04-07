@@ -9,7 +9,7 @@ import 'package:unpub_aws/package_store/s3_sts_file_store.dart';
 
 main(List<String> arguments) async {
   final environment = Platform.environment;
-  ArgResults args = _parseArgs(arguments);
+  ArgResults args = _parseArgs(arguments, environment);
   final host = args['host'] as String;
   final port = int.parse(args['port'] as String);
   final dbUri = args['database'] as String;
@@ -87,21 +87,19 @@ Future<MongoStore> _createAndInitMongoDbStore(
   return mongoDbStore;
 }
 
-ArgResults _parseArgs(List<String> args) {
+ArgResults _parseArgs(List<String> args, Map<String, dynamic> environment) {
   final parser = ArgParser();
   parser.addOption('host', abbr: 'h', defaultsTo: '0.0.0.0');
   parser.addOption('port', abbr: 'p', defaultsTo: '4000');
   parser.addOption('database', abbr: 'd', defaultsTo: 'mongodb://localhost:27017/dart_pub');
   parser.addOption('proxy-origin', abbr: 'o', defaultsTo: '');
   parser.addOption('exitOnDbError', abbr: 'e', defaultsTo: 'false');
-  parser.addOption('roleArn', defaultsTo: '');
-  parser.addOption('roleSessionName', defaultsTo: '');
-  parser.addOption('webIdentityToken', defaultsTo: '');
-  parser.addOption('webIdentityTokenFile', defaultsTo: '');
-  parser.addOption('bucketName', defaultsTo: '');
-  parser.addOption('region', defaultsTo: '');
-  parser.addOption('dynamoDbUrl', defaultsTo: '');
-  parser.addOption('dynamoDbTableName', defaultsTo: '');
+  parser.addOption('roleArn', defaultsTo: environment['AWS_ROLE_ARN']);
+  parser.addOption('roleSessionName', defaultsTo: 'sessionName');
+  parser.addOption('webIdentityToken', defaultsTo: environment['AWS_WEB_IDENTITY_TOKEN']);
+  parser.addOption('webIdentityTokenFile', defaultsTo: environment['AWS_WEB_IDENTITY_TOKEN_FILE']);
+  parser.addOption('bucketName', defaultsTo: environment['AWS_BUCKET_NAME']);
+  parser.addOption('region', defaultsTo: environment['AWS_REGION']);
   parser.addOption('tlsCAFile', defaultsTo: '');
   parser.addOption('tlsCertificateKeyFile', defaultsTo: '');
   parser.addOption('tlsCertificateKeyFilePassword', defaultsTo: '');
@@ -133,15 +131,12 @@ Future<S3StoreIamStore> _createAndInitS3Store({
       roleSessionName: roleSessionName!,
       webIdentityToken: webIdentityToken!,
     );
-  } else if (webIdentityTokenFile?.isNotEmpty == true ||
-      environment['AWS_WEB_IDENTITY_TOKEN_FILE']?.isNotEmpty == true) {
+  } else if (webIdentityTokenFile?.isNotEmpty == true) {
     awsWebIdentity = await AwsWebIdentity.fromEnvFile(
       env: environment,
-      path: environment['AWS_WEB_IDENTITY_TOKEN_FILE']?.isNotEmpty == true
-          ? environment['AWS_WEB_IDENTITY_TOKEN_FILE']
-          : webIdentityTokenFile,
-      roleSessionName: roleSessionName?.isNotEmpty == true ? roleSessionName : 'testSessionName',
-      roleArn: roleArn?.isNotEmpty == true ? roleArn : environment['AWS_ROLE_ARN'],
+      path: webIdentityTokenFile,
+      roleSessionName: roleSessionName,
+      roleArn: roleArn,
     );
   } else {
     awsWebIdentity = AwsWebIdentity.fromEnv(environment);
