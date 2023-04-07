@@ -137,7 +137,9 @@ Future<S3StoreIamStore> _createAndInitS3Store({
       environment['AWS_WEB_IDENTITY_TOKEN_FILE']?.isNotEmpty == true) {
     awsWebIdentity = await AwsWebIdentity.fromEnvFile(
       env: environment,
-      path: webIdentityTokenFile,
+      path: environment['AWS_WEB_IDENTITY_TOKEN_FILE']?.isNotEmpty == true
+          ? environment['AWS_WEB_IDENTITY_TOKEN_FILE']
+          : webIdentityTokenFile,
       roleSessionName: roleSessionName,
       roleArn: roleArn,
     );
