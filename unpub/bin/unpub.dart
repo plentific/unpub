@@ -124,6 +124,10 @@ Future<S3StoreIamStore> _createAndInitS3Store({
   required String? region,
   required String? bucketName,
 }) async {
+  print('::: AWS_WEB_IDENTITY_TOKEN_FILE: ${environment['AWS_WEB_IDENTITY_TOKEN_FILE']}');
+  print('::: AWS_WEB_IDENTITY_TOKEN: ${environment['AWS_WEB_IDENTITY_TOKEN']}');
+  print('::: webIdentityTokenFile: $webIdentityTokenFile');
+
   late AwsWebIdentity awsWebIdentity;
   if (roleArn?.isNotEmpty == true &&
       roleSessionName?.isNotEmpty == true &&
