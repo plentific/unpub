@@ -33,6 +33,10 @@ class S3StoreIamStore extends PackageStore {
     _endpoint = endpoint ?? _env['AWS_S3_ENDPOINT'] ?? 's3.amazonaws.com';
     _bucketName = bucketName ?? _env['AWS_BUCKET_NAME'] ?? '';
 
+    print('roleSessionName: ${webIdentity.roleSessionName}');
+    print('roleArn: ${webIdentity.roleArn}');
+    print('webIdentityToken: ${webIdentity.webIdentityToken}');
+
     if (webIdentity.roleArn.isEmpty ||
         webIdentity.webIdentityToken.isEmpty ||
         webIdentity.roleSessionName.isEmpty) {

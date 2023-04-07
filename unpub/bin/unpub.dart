@@ -124,8 +124,6 @@ Future<S3StoreIamStore> _createAndInitS3Store({
   required String? region,
   required String? bucketName,
 }) async {
-  print('roleSessionName: $roleSessionName');
-  print('roleArn: $roleArn');
   late AwsWebIdentity awsWebIdentity;
   if (roleArn?.isNotEmpty == true &&
       roleSessionName?.isNotEmpty == true &&
