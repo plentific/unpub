@@ -9,14 +9,13 @@ dependencies:
   unpub: 
   minio: 
     git:
-        url: https://github.com/jakubjodelka/aws_client.git
-        path: generated/aws_sts_api
+      url: https://github.com/jakubjodelka/minio-dart
     # path: /Users/jakubjodelka/Documents/Programming/Plentific/minio-dart
   http: 
   aws_sts_api: 
     git:
-        url: https://github.com/jakubjodelka/aws_client.git
-        path: generated/aws_sts_api
+      url: https://github.com/jakubjodelka/aws_client.git
+      path: generated/aws_sts_api
     # path: /Users/jakubjodelka/Documents/Programming/Plentific/aws_client/generated/aws_sts_api
 
 dev_dependencies:
