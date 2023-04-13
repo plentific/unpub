@@ -70,7 +70,7 @@ class S3StoreIamStore extends PackageStore {
 
     try {
       print('before start "assumeRoleWithWebIdentity"');
-      final stsResponse = await STS().assumeRoleWithWebIdentity(
+      final stsResponse = await STS(region: _region).assumeRoleWithWebIdentity(
         roleArn: webIdentity.roleArn,
         roleSessionName: webIdentity.roleSessionName,
         webIdentityToken: webIdentity.webIdentityToken,
@@ -79,9 +79,10 @@ class S3StoreIamStore extends PackageStore {
       final credentials = stsResponse.credentials;
       print('Log (s3): got credentials valid until: ${credentials?.expiration}');
       if (credentials == null) {
-        print('Log (s3): got emoty credentials');
+        print('Log (s3): got empty credentials');
         throw Exception('Got empty AWS credentials. Cannot initialize AWS client.');
       }
+      print('Log (s3): inits Minio client with: "${credentials.sessionToken}" session token');
       _minio = Minio(
         endPoint: _endpoint,
         region: _region,
