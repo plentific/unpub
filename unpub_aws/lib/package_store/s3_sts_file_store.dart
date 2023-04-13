@@ -82,13 +82,16 @@ class S3StoreIamStore extends PackageStore {
         print('Log (s3): got empty credentials');
         throw Exception('Got empty AWS credentials. Cannot initialize AWS client.');
       }
-      print('Log (s3): inits Minio client with: "${credentials.sessionToken}" session token');
+      print(
+          'Log (s3): inits Minio client in "${credentials.sessionToken.substring(0, 12)}..." session token');
       _minio = Minio(
         endPoint: _endpoint,
         region: _region,
         accessKey: credentials.accessKeyId,
         secretKey: credentials.secretAccessKey,
       );
+      ;
+      print('Log (s3): inits Minio client in "${_minio?.region}" region');
       _credentialsRefreshStreamController.add(credentials.expiration);
     } catch (e, s) {
       print('Error "_getAwsCredentialsFromStsAndInitClient":');
