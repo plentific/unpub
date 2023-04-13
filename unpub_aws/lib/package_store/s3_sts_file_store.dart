@@ -33,10 +33,6 @@ class S3StoreIamStore extends PackageStore {
     _endpoint = endpoint ?? _env['AWS_S3_ENDPOINT'] ?? 's3.amazonaws.com';
     _bucketName = bucketName ?? _env['AWS_BUCKET_NAME'] ?? '';
 
-    print('roleSessionName: ${webIdentity.roleSessionName}');
-    print('roleArn: ${webIdentity.roleArn}');
-    print('webIdentityToken: ${webIdentity.webIdentityToken}');
-
     if (webIdentity.roleArn.isEmpty ||
         webIdentity.webIdentityToken.isEmpty ||
         webIdentity.roleSessionName.isEmpty) {
@@ -68,24 +64,37 @@ class S3StoreIamStore extends PackageStore {
   }
 
   Future<void> _getAwsCredentialsFromStsAndInitClient() async {
-    final stsResponse = await STS().assumeRoleWithWebIdentity(
-      roleArn: webIdentity.roleArn,
-      roleSessionName: webIdentity.roleSessionName,
-      webIdentityToken: webIdentity.webIdentityToken,
-    );
-    final credentials = stsResponse.credentials;
-    print('Log (s3): got credentials valid until: ${credentials?.expiration}');
-    if (credentials == null) {
-      print('Log (s3): got emoty credentials');
-      throw Exception('Got empty AWS credentials. Cannot initialize AWS client.');
+    print('roleArn: ${webIdentity.roleArn}');
+    print('roleSessionName: ${webIdentity.roleSessionName}');
+    print('webIdentityToken: ${webIdentity.webIdentityToken}');
+
+    try {
+      print('before start "assumeRoleWithWebIdentity"');
+      final stsResponse = await STS().assumeRoleWithWebIdentity(
+        roleArn: webIdentity.roleArn,
+        roleSessionName: webIdentity.roleSessionName,
+        webIdentityToken: webIdentity.webIdentityToken,
+      );
+      print('stsResponse: $stsResponse');
+      final credentials = stsResponse.credentials;
+      print('Log (s3): got credentials valid until: ${credentials?.expiration}');
+      if (credentials == null) {
+        print('Log (s3): got emoty credentials');
+        throw Exception('Got empty AWS credentials. Cannot initialize AWS client.');
+      }
+      _minio = Minio(
+        endPoint: _endpoint,
+        region: _region,
+        accessKey: credentials.accessKeyId,
+        secretKey: credentials.secretAccessKey,
+      );
+      _credentialsRefreshStreamController.add(credentials.expiration);
+    } catch (e, s) {
+      print('Error "_getAwsCredentialsFromStsAndInitClient":');
+      print(e);
+      print(s);
+      rethrow;
     }
-    _minio = Minio(
-      endPoint: _endpoint,
-      region: _region,
-      accessKey: credentials.accessKeyId,
-      secretKey: credentials.secretAccessKey,
-    );
-    _credentialsRefreshStreamController.add(credentials.expiration);
   }
 
   @override
