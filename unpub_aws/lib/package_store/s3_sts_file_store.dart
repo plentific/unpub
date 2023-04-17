@@ -87,10 +87,10 @@ class S3StoreIamStore extends PackageStore {
       _minio = Minio(
         endPoint: _endpoint,
         region: _region,
+        sessionToken: credentials.sessionToken,
         accessKey: credentials.accessKeyId,
         secretKey: credentials.secretAccessKey,
       );
-      ;
       print('Log (s3): inits Minio client in "${_minio?.region}" region');
       _credentialsRefreshStreamController.add(credentials.expiration);
     } catch (e, s) {
