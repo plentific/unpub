@@ -67,10 +67,11 @@ class S3StoreIamStore extends PackageStore {
     print('roleArn: ${webIdentity.roleArn}');
     print('roleSessionName: ${webIdentity.roleSessionName}');
     print('webIdentityToken: ${webIdentity.webIdentityToken}');
+    var sts = STS(region: _region);
 
     try {
       print('before start "assumeRoleWithWebIdentity"');
-      final stsResponse = await STS(region: _region).assumeRoleWithWebIdentity(
+      final stsResponse = await sts.assumeRoleWithWebIdentity(
         roleArn: webIdentity.roleArn,
         roleSessionName: webIdentity.roleSessionName,
         webIdentityToken: webIdentity.webIdentityToken,
@@ -90,7 +91,7 @@ class S3StoreIamStore extends PackageStore {
       print('Log (s3): sessionToken: ${credentials.sessionToken}');
       print('Log (s3): secretAccessKey: ${credentials.secretAccessKey}');
       try {
-        final callerIdentity = await STS(region: _region).getCallerIdentity();
+        final callerIdentity = await sts.getCallerIdentity();
         print('Log (callerIdentity): account: ${callerIdentity.account}');
         print('Log (callerIdentity): arn: ${callerIdentity.arn}');
         print('Log (callerIdentity): userId: ${callerIdentity.userId}');
@@ -98,8 +99,7 @@ class S3StoreIamStore extends PackageStore {
         print('Log (callerIdentity error): $e');
       }
       try {
-        final accessKeyInfo =
-            await STS(region: _region).getAccessKeyInfo(accessKeyId: credentials.accessKeyId);
+        final accessKeyInfo = await sts.getAccessKeyInfo(accessKeyId: credentials.accessKeyId);
         print('Log (keyInfo): account: ${accessKeyInfo.account}');
       } catch (e) {
         print('Log (keyInfo error): $e');
