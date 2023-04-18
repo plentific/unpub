@@ -89,12 +89,21 @@ class S3StoreIamStore extends PackageStore {
       print('Log (s3): accessKeyId: ${credentials.accessKeyId}');
       print('Log (s3): sessionToken: ${credentials.sessionToken}');
       print('Log (s3): secretAccessKey: ${credentials.secretAccessKey}');
-      final callerIdentity = await STS(region: _region).getCallerIdentity();
-      print('Log (callerIdentity): account: ${callerIdentity.account}');
-      print('Log (callerIdentity): arn: ${callerIdentity.arn}');
-      print('Log (callerIdentity): userId: ${callerIdentity.userId}');
-      final accessKeyInfo = await STS(region: _region).getAccessKeyInfo(accessKeyId: credentials.accessKeyId);
-      print('Log (keyInfo): account: ${accessKeyInfo.account}');
+      try {
+        final callerIdentity = await STS(region: _region).getCallerIdentity();
+        print('Log (callerIdentity): account: ${callerIdentity.account}');
+        print('Log (callerIdentity): arn: ${callerIdentity.arn}');
+        print('Log (callerIdentity): userId: ${callerIdentity.userId}');
+      } catch (e) {
+        print('Log (callerIdentity error): $e');
+      }
+      try {
+        final accessKeyInfo =
+            await STS(region: _region).getAccessKeyInfo(accessKeyId: credentials.accessKeyId);
+        print('Log (keyInfo): account: ${accessKeyInfo.account}');
+      } catch (e) {
+        print('Log (keyInfo error): $e');
+      }
 // ----------
 
       _minio = Minio(
