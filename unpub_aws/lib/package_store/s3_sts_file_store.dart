@@ -138,7 +138,6 @@ class S3StoreIamStore extends PackageStore {
       print('Log (s3): bucket trim 1: ${credentials.accessKeyId == credentials.accessKeyId.trim()}');
       print('Log (s3): bucket trim 2: ${credentials.sessionToken == credentials.sessionToken.trim()}');
       print('Log (s3): bucket trim 3: ${credentials.secretAccessKey == credentials.secretAccessKey.trim()}');
-
 // ----------
       _credentialsRefreshStreamController.add(credentials.expiration);
     } catch (e, s) {
