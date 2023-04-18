@@ -83,6 +83,10 @@ class S3StoreIamStore extends PackageStore {
         print('Log (s3): got empty credentials');
         throw Exception('Got empty AWS credentials. Cannot initialize AWS client.');
       }
+      final awsClientCredentials = AwsClientCredentials(
+        accessKey: credentials.accessKeyId,
+        secretKey: credentials.secretAccessKey,
+      );
       print(
           'Log (s3): inits Minio client in "${credentials.sessionToken.substring(0, 12)}..." session token');
 
@@ -91,15 +95,17 @@ class S3StoreIamStore extends PackageStore {
       print('Log (s3): sessionToken: ${credentials.sessionToken}');
       print('Log (s3): secretAccessKey: ${credentials.secretAccessKey}');
       try {
-        final assumeRole =
-            await sts.assumeRole(roleArn: webIdentity.roleArn, roleSessionName: webIdentity.roleSessionName);
+        final assumeRole = await STS(credentials: awsClientCredentials).assumeRole(
+          roleArn: webIdentity.roleArn,
+          roleSessionName: webIdentity.roleSessionName,
+        );
 
         print('Log (assumeRole): account: ${assumeRole.assumedRoleUser}');
         print('Log (assumeRole): userId: ${assumeRole.packedPolicySize}');
         print('Log (assumeRole): accessKeyId: ${assumeRole.credentials?.accessKeyId}');
         print('Log (assumeRole): secretAccessKey: ${assumeRole.credentials?.secretAccessKey}');
         print('Log (assumeRole): sessionToken: ${assumeRole.credentials?.sessionToken}');
-        final callerIdentity = await sts.getCallerIdentity();
+        final callerIdentity = await STS(credentials: awsClientCredentials).getCallerIdentity();
         print('Log (assumeRolecallerIdentity): account: ${callerIdentity.account}');
         print('Log (assumeRolecallerIdentity): arn: ${callerIdentity.arn}');
         print('Log (assumeRolecallerIdentity): userId: ${callerIdentity.userId}');
