@@ -114,7 +114,7 @@ class S3StoreIamStore extends PackageStore {
 // ----------
 
       _minio = Minio(
-        endPoint: _endpoint,
+        endPoint: 's3.eu-west-1.amazonaws.com',
         region: _region,
         sessionToken: credentials.sessionToken,
         accessKey: credentials.accessKeyId,
