@@ -91,6 +91,23 @@ class S3StoreIamStore extends PackageStore {
       print('Log (s3): sessionToken: ${credentials.sessionToken}');
       print('Log (s3): secretAccessKey: ${credentials.secretAccessKey}');
       try {
+        final assumeRole =
+            await sts.assumeRole(roleArn: webIdentity.roleArn, roleSessionName: webIdentity.roleSessionName);
+
+        print('Log (assumeRole): account: ${assumeRole.assumedRoleUser}');
+        print('Log (assumeRole): userId: ${assumeRole.packedPolicySize}');
+        print('Log (assumeRole): accessKeyId: ${assumeRole.credentials?.accessKeyId}');
+        print('Log (assumeRole): secretAccessKey: ${assumeRole.credentials?.secretAccessKey}');
+        print('Log (assumeRole): sessionToken: ${assumeRole.credentials?.sessionToken}');
+        final callerIdentity = await sts.getCallerIdentity();
+        print('Log (assumeRolecallerIdentity): account: ${callerIdentity.account}');
+        print('Log (assumeRolecallerIdentity): arn: ${callerIdentity.arn}');
+        print('Log (assumeRolecallerIdentity): userId: ${callerIdentity.userId}');
+      } catch (e) {
+        print('Log (assumeRole error): $e');
+      }
+
+      try {
         final callerIdentity = await sts.getCallerIdentity();
         print('Log (callerIdentity): account: ${callerIdentity.account}');
         print('Log (callerIdentity): arn: ${callerIdentity.arn}');
