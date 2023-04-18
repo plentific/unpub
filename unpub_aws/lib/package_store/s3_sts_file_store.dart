@@ -123,14 +123,22 @@ class S3StoreIamStore extends PackageStore {
       print('Log (s3): inits Minio client in "${_minio?.region}" region');
 
 // ---------- New logs
-      final x = await _minio!.listAllObjects(
-        _bucketName,
-      );
-      print('Log (s3): list objects:');
-      print({x.objects.map((e) => e.key)});
+      try {
+        final x = await _minio!.listAllObjects(
+          _bucketName,
+        );
+        print('Log (s3): list objects:');
+        print({x.objects.map((e) => e.key)});
+      } catch (e) {}
       print('Log (s3): inits Minio client with "${_minio?.accessKey}" accessKey');
       print('Log (s3): inits Minio client with "${_minio?.sessionToken}" sessionToken');
       print('Log (s3): inits Minio client with "${_minio?.secretKey}" secretKey');
+
+      print('Log (s3): bucket: $_bucketName');
+      print('Log (s3): bucket trim 1: ${credentials.accessKeyId == credentials.accessKeyId.trim()}');
+      print('Log (s3): bucket trim 2: ${credentials.sessionToken == credentials.sessionToken.trim()}');
+      print('Log (s3): bucket trim 3: ${credentials.secretAccessKey == credentials.secretAccessKey.trim()}');
+
 // ----------
       _credentialsRefreshStreamController.add(credentials.expiration);
     } catch (e, s) {
