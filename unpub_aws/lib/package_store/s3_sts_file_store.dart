@@ -87,6 +87,7 @@ class S3StoreIamStore extends PackageStore {
         accessKey: credentials.accessKeyId,
         secretKey: credentials.secretAccessKey,
       );
+      final authSts = STS(credentials: awsClientCredentials);
       print(
           'Log (s3): inits Minio client in "${credentials.sessionToken.substring(0, 12)}..." session token');
 
@@ -95,7 +96,7 @@ class S3StoreIamStore extends PackageStore {
       print('Log (s3): sessionToken: ${credentials.sessionToken}');
       print('Log (s3): secretAccessKey: ${credentials.secretAccessKey}');
       try {
-        final assumeRole = await STS(credentials: awsClientCredentials).assumeRole(
+        final assumeRole = await authSts.assumeRole(
           roleArn: webIdentity.roleArn,
           roleSessionName: webIdentity.roleSessionName,
         );
@@ -105,7 +106,7 @@ class S3StoreIamStore extends PackageStore {
         print('Log (assumeRole): accessKeyId: ${assumeRole.credentials?.accessKeyId}');
         print('Log (assumeRole): secretAccessKey: ${assumeRole.credentials?.secretAccessKey}');
         print('Log (assumeRole): sessionToken: ${assumeRole.credentials?.sessionToken}');
-        final callerIdentity = await STS(credentials: awsClientCredentials).getCallerIdentity();
+        final callerIdentity = await authSts.getCallerIdentity();
         print('Log (assumeRolecallerIdentity): account: ${callerIdentity.account}');
         print('Log (assumeRolecallerIdentity): arn: ${callerIdentity.arn}');
         print('Log (assumeRolecallerIdentity): userId: ${callerIdentity.userId}');
@@ -114,7 +115,7 @@ class S3StoreIamStore extends PackageStore {
       }
 
       try {
-        final callerIdentity = await sts.getCallerIdentity();
+        final callerIdentity = await authSts.getCallerIdentity();
         print('Log (callerIdentity): account: ${callerIdentity.account}');
         print('Log (callerIdentity): arn: ${callerIdentity.arn}');
         print('Log (callerIdentity): userId: ${callerIdentity.userId}');
@@ -122,7 +123,7 @@ class S3StoreIamStore extends PackageStore {
         print('Log (callerIdentity error): $e');
       }
       try {
-        final accessKeyInfo = await sts.getAccessKeyInfo(accessKeyId: credentials.accessKeyId);
+        final accessKeyInfo = await authSts.getAccessKeyInfo(accessKeyId: credentials.accessKeyId);
         print('Log (keyInfo): account: ${accessKeyInfo.account}');
       } catch (e) {
         print('Log (keyInfo error): $e');
