@@ -84,6 +84,19 @@ class S3StoreIamStore extends PackageStore {
       }
       print(
           'Log (s3): inits Minio client in "${credentials.sessionToken.substring(0, 12)}..." session token');
+
+// ---------- New logs
+      print('Log (s3): accessKeyId: ${credentials.accessKeyId}');
+      print('Log (s3): sessionToken: ${credentials.sessionToken}');
+      print('Log (s3): secretAccessKey: ${credentials.secretAccessKey}');
+      final callerIdentity = await STS(region: _region).getCallerIdentity();
+      print('Log (callerIdentity): account: ${callerIdentity.account}');
+      print('Log (callerIdentity): arn: ${callerIdentity.arn}');
+      print('Log (callerIdentity): userId: ${callerIdentity.userId}');
+      final accessKeyInfo = await STS(region: _region).getAccessKeyInfo(accessKeyId: credentials.accessKeyId);
+      print('Log (keyInfo): account: ${accessKeyInfo.account}');
+// ----------
+
       _minio = Minio(
         endPoint: _endpoint,
         region: _region,
@@ -92,6 +105,12 @@ class S3StoreIamStore extends PackageStore {
         secretKey: credentials.secretAccessKey,
       );
       print('Log (s3): inits Minio client in "${_minio?.region}" region');
+
+// ---------- New logs
+      print('Log (s3): inits Minio client with "${_minio?.accessKey}" accessKey');
+      print('Log (s3): inits Minio client with "${_minio?.sessionToken}" sessionToken');
+      print('Log (s3): inits Minio client with "${_minio?.secretKey}" secretKey');
+// ----------
       _credentialsRefreshStreamController.add(credentials.expiration);
     } catch (e, s) {
       print('Error "_getAwsCredentialsFromStsAndInitClient":');
