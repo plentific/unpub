@@ -96,24 +96,6 @@ class S3StoreIamStore extends PackageStore {
       print('Log (s3): accessKeyId: ${credentials.accessKeyId}');
       print('Log (s3): sessionToken: ${credentials.sessionToken}');
       print('Log (s3): secretAccessKey: ${credentials.secretAccessKey}');
-      try {
-        final assumeRole = await authSts.assumeRole(
-          roleArn: webIdentity.roleArn,
-          roleSessionName: webIdentity.roleSessionName,
-        );
-
-        print('Log (assumeRole): account: ${assumeRole.assumedRoleUser}');
-        print('Log (assumeRole): userId: ${assumeRole.packedPolicySize}');
-        print('Log (assumeRole): accessKeyId: ${assumeRole.credentials?.accessKeyId}');
-        print('Log (assumeRole): secretAccessKey: ${assumeRole.credentials?.secretAccessKey}');
-        print('Log (assumeRole): sessionToken: ${assumeRole.credentials?.sessionToken}');
-        final callerIdentity = await authSts.getCallerIdentity();
-        print('Log (assumeRolecallerIdentity): account: ${callerIdentity.account}');
-        print('Log (assumeRolecallerIdentity): arn: ${callerIdentity.arn}');
-        print('Log (assumeRolecallerIdentity): userId: ${callerIdentity.userId}');
-      } catch (e) {
-        print('Log (assumeRole error): $e');
-      }
 
       try {
         final callerIdentity = await authSts.getCallerIdentity();
@@ -141,6 +123,11 @@ class S3StoreIamStore extends PackageStore {
       print('Log (s3): inits Minio client in "${_minio?.region}" region');
 
 // ---------- New logs
+      final x = await _minio!.listAllObjects(
+        _bucketName,
+      );
+      print('Log (s3): list objects:');
+      print({x.objects.map((e) => e.key)});
       print('Log (s3): inits Minio client with "${_minio?.accessKey}" accessKey');
       print('Log (s3): inits Minio client with "${_minio?.sessionToken}" sessionToken');
       print('Log (s3): inits Minio client with "${_minio?.secretKey}" secretKey');
