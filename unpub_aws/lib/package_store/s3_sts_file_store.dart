@@ -86,6 +86,7 @@ class S3StoreIamStore extends PackageStore {
       final awsClientCredentials = AwsClientCredentials(
         accessKey: credentials.accessKeyId,
         secretKey: credentials.secretAccessKey,
+        sessionToken: credentials.sessionToken,
       );
       final authSts = STS(credentials: awsClientCredentials);
       print(
