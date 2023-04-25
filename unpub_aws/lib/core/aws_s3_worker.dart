@@ -23,7 +23,7 @@ class AwsS3Worker {
     required List<int> content,
   }) async* {
     final request = AWSStreamedHttpRequest.put(
-      Uri.https('s3.$region.amazonaws.com', '/$bucket/'),
+      Uri.https('s3.$region.amazonaws.com', '/$bucket/${_getObjectKey(name, version)}'),
       body: Stream.value(content),
     );
     final signedRequest = await _signRequest(credentials: _credentials, request: request);
@@ -31,12 +31,12 @@ class AwsS3Worker {
     yield* response.body;
   }
 
-  Stream<void> download({
+  Stream<List<int>> download({
     required String name,
     required String version,
   }) async* {
     final request = AWSStreamedHttpRequest.get(
-      Uri.https('s3.$region.amazonaws.com', '/$bucket/'),
+      Uri.https('s3.$region.amazonaws.com', '/$bucket/${_getObjectKey(name, version)}'),
     );
     final signedRequest = await _signRequest(credentials: _credentials, request: request);
     final response = await signedRequest.send().response;
@@ -66,4 +66,6 @@ class AwsS3Worker {
     );
     return signer.sign(request, credentialScope: scope);
   }
+
+  String _getObjectKey(String name, String version) => '$name/$name-$version.tar.gz';
 }
