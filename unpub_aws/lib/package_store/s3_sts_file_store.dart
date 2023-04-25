@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:aws_sts_api/sts-2011-06-15.dart';
 import 'package:minio/minio.dart';
 import 'package:unpub/unpub.dart';
+import 'package:unpub_aws/core/aws_s3_worker.dart';
 import 'package:unpub_aws/core/aws_web_identity.dart';
 
 /// Use an AWS S3 Bucket using IAM as a package store
@@ -15,8 +16,7 @@ class S3StoreIamStore extends PackageStore {
   Minio? _minio;
   final Map<String, String> _env;
   late final String _bucketName;
-  late final String? _region;
-  late final String _endpoint;
+  late final String _region;
 
   final _credentialsRefreshStreamController = StreamController<DateTime>();
   StreamSubscription? _credentialsRefreshStreamSubscription;
@@ -26,11 +26,9 @@ class S3StoreIamStore extends PackageStore {
     this.getObjectPath,
     String? bucketName,
     String? region,
-    String? endpoint,
     Map<String, String>? environment,
   }) : _env = environment ?? Platform.environment {
-    _region = region ?? _env['AWS_REGION'];
-    _endpoint = endpoint ?? _env['AWS_S3_ENDPOINT'] ?? 's3.amazonaws.com';
+    _region = region ?? _env['AWS_REGION'] ?? 'eu-west-1';
     _bucketName = bucketName ?? _env['AWS_BUCKET_NAME'] ?? '';
 
     if (webIdentity.roleArn.isEmpty ||
@@ -41,7 +39,7 @@ class S3StoreIamStore extends PackageStore {
     if (_bucketName.isEmpty == true) {
       throw ArgumentError('AWS bucket name cannot be null.');
     }
-    if (_region == null || _region?.isEmpty == true) {
+    if (_region.isEmpty == true) {
       throw ArgumentError('Could not determine a default region for AWS.');
     }
   }
@@ -150,12 +148,14 @@ class S3StoreIamStore extends PackageStore {
 
   @override
   Future<void> upload(String name, String version, List<int> content) async {
-    _checkMinioClientInitialized();
-    await _minio!.putObject(
-      _bucketName,
-      _getObjectKey(name, version),
-      Stream.value(Uint8List.fromList(content)),
-    );
+    // _checkMinioClientInitialized();
+    // await _minio!.putObject(
+    //   _bucketName,
+    //   _getObjectKey(name, version),
+    //   Stream.value(Uint8List.fromList(content)),
+    // );
+    final s3 = AwsS3Worker(region: _region, bucket: _bucketName);
+    await s3.upload(name: name, version: version, content: content);
   }
 
   @override
