@@ -87,12 +87,6 @@ class S3StoreIamStore extends PackageStore {
 
   @override
   Future<void> upload(String name, String version, List<int> content) async {
-    // _checkMinioClientInitialized();
-    // await _minio!.putObject(
-    //   _bucketName,
-    //   _getObjectKey(name, version),
-    //   Stream.value(Uint8List.fromList(content)),
-    // );
     final s3 = AwsS3Worker(region: _region, bucket: _bucketName);
     s3.credentials = _credentials!;
     final response = await s3.upload(name: name, version: version, content: content);
@@ -105,20 +99,8 @@ class S3StoreIamStore extends PackageStore {
 
   @override
   Stream<List<int>> download(String name, String version) async* {
-    // _checkMinioClientInitialized();
-    // final getObjectStream = await _minio!.getObject(
-    //   _bucketName,
-    //   _getObjectKey(name, version),
-    // );
-    // yield* getObjectStream.map((event) => Uint8List.fromList(event));
     final s3 = AwsS3Worker(region: _region, bucket: _bucketName);
     s3.credentials = _credentials!;
     yield* s3.download(name: name, version: version);
-  }
-
-  void _checkMinioClientInitialized() {
-    if (_minio == null) {
-      throw Exception('AWS client is not initialized');
-    }
   }
 }
