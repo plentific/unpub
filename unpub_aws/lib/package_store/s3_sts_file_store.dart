@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:aws_sts_api/sts-2011-06-15.dart';
-import 'package:minio/minio.dart';
 import 'package:unpub/unpub.dart';
 import 'package:unpub_aws/core/aws_s3_worker.dart';
 import 'package:unpub_aws/core/aws_web_identity.dart';
@@ -12,10 +11,11 @@ class S3StoreIamStore extends PackageStore {
   final AwsWebIdentity webIdentity;
   String Function(String name, String version)? getObjectPath;
 
-  Minio? _minio;
   final Map<String, String> _env;
   late final String _bucketName;
   late final String _region;
+
+  Credentials? _credentials;
 
   final _credentialsRefreshStreamController = StreamController<DateTime>();
   StreamSubscription? _credentialsRefreshStreamSubscription;
@@ -61,86 +61,26 @@ class S3StoreIamStore extends PackageStore {
   }
 
   Future<void> _getAwsCredentialsFromStsAndInitClient() async {
-    print('roleArn: ${webIdentity.roleArn}');
-    print('roleSessionName: ${webIdentity.roleSessionName}');
-    print('webIdentityToken: ${webIdentity.webIdentityToken}');
     var sts = STS(region: _region);
 
     try {
-      print('before start "assumeRoleWithWebIdentity"');
       final stsResponse = await sts.assumeRoleWithWebIdentity(
         roleArn: webIdentity.roleArn,
         roleSessionName: webIdentity.roleSessionName,
         webIdentityToken: webIdentity.webIdentityToken,
       );
-      print('stsResponse: $stsResponse');
       final credentials = stsResponse.credentials;
-      print('Log (s3): got credentials valid until: ${credentials?.expiration}');
       if (credentials == null) {
-        print('Log (s3): got empty credentials');
         throw Exception('Got empty AWS credentials. Cannot initialize AWS client.');
       }
-      final awsClientCredentials = AwsClientCredentials(
-        accessKey: credentials.accessKeyId,
-        secretKey: credentials.secretAccessKey,
+      _credentials = Credentials(
+        accessKeyId: credentials.accessKeyId,
+        secretAccessKey: credentials.secretAccessKey,
         sessionToken: credentials.sessionToken,
+        expiration: credentials.expiration,
       );
-      final authSts = STS(credentials: awsClientCredentials);
-      print(
-          'Log (s3): inits Minio client in "${credentials.sessionToken.substring(0, 12)}..." session token');
-
-// ---------- New logs
-      print('Log (s3): accessKeyId: ${credentials.accessKeyId}');
-      print('Log (s3): sessionToken: ${credentials.sessionToken}');
-      print('Log (s3): secretAccessKey: ${credentials.secretAccessKey}');
-
-      try {
-        final callerIdentity = await authSts.getCallerIdentity();
-        print('Log (callerIdentity): account: ${callerIdentity.account}');
-        print('Log (callerIdentity): arn: ${callerIdentity.arn}');
-        print('Log (callerIdentity): userId: ${callerIdentity.userId}');
-      } catch (e) {
-        print('Log (callerIdentity error): $e');
-      }
-      try {
-        final accessKeyInfo = await authSts.getAccessKeyInfo(accessKeyId: credentials.accessKeyId);
-        print('Log (keyInfo): account: ${accessKeyInfo.account}');
-      } catch (e) {
-        print('Log (keyInfo error): $e');
-      }
-// ----------
-
-      _minio = Minio(
-        endPoint: 's3.eu-west-1.amazonaws.com',
-        region: _region,
-        sessionToken: credentials.sessionToken,
-        accessKey: credentials.accessKeyId,
-        secretKey: credentials.secretAccessKey,
-      );
-      print('Log (s3): inits Minio client in "${_minio?.region}" region');
-
-// ---------- New logs
-      try {
-        final x = await _minio!.listAllObjects(
-          _bucketName,
-        );
-        print('Log (s3): list objects:');
-        print({x.objects.map((e) => e.key)});
-      } catch (e) {}
-      print('Log (s3): inits Minio client with "${_minio?.accessKey}" accessKey');
-      print('Log (s3): inits Minio client with "${_minio?.sessionToken}" sessionToken');
-      print('Log (s3): inits Minio client with "${_minio?.secretKey}" secretKey');
-
-      print('Log (s3): bucket: $_bucketName');
-      print('Log (s3): bucket trim 1: ${credentials.accessKeyId == credentials.accessKeyId.trim()}');
-      print('Log (s3): bucket trim 2: ${credentials.sessionToken == credentials.sessionToken.trim()}');
-      print('Log (s3): bucket trim 3: ${credentials.secretAccessKey == credentials.secretAccessKey.trim()}');
-// ----------
       _credentialsRefreshStreamController.add(credentials.expiration);
-    } catch (e, s) {
-      print('Error "_getAwsCredentialsFromStsAndInitClient":');
-      print(e);
-      print(s);
+    } catch (e) {
       rethrow;
     }
   }
@@ -154,6 +94,7 @@ class S3StoreIamStore extends PackageStore {
     //   Stream.value(Uint8List.fromList(content)),
     // );
     final s3 = AwsS3Worker(region: _region, bucket: _bucketName);
+    s3.credentials = _credentials!;
     final response = await s3.upload(name: name, version: version, content: content);
 
     final x = await response.toList();
@@ -171,6 +112,7 @@ class S3StoreIamStore extends PackageStore {
     // );
     // yield* getObjectStream.map((event) => Uint8List.fromList(event));
     final s3 = AwsS3Worker(region: _region, bucket: _bucketName);
+    s3.credentials = _credentials!;
     yield* s3.download(name: name, version: version);
   }
 
