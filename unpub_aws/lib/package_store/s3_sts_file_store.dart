@@ -46,7 +46,6 @@ class S3StoreIamStore extends PackageStore {
   Future<void> init() async {
     _credentialsRefreshStreamSubscription = _credentialsRefreshStreamController.stream.listen(
       (event) async {
-        print('Log (s3): added new expiration time $event');
         final now = DateTime.now();
         final timeDifferenceInSeconds = event.difference(now);
         await Future.delayed(timeDifferenceInSeconds);
