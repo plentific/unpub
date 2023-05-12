@@ -88,11 +88,7 @@ class S3StoreIamStore extends PackageStore {
   Future<void> upload(String name, String version, List<int> content) async {
     final s3 = AwsS3Worker(region: _region, bucket: _bucketName);
     s3.credentials = _credentials!;
-    final response = await s3.upload(name: name, version: version, content: content);
-
-    final x = await response.toList();
-    print(x.map((e) => String.fromCharCodes(e)).join('\n'));
-
+    await s3.upload(name: name, version: version, content: content);
     return;
   }
 
