@@ -95,7 +95,7 @@ ArgResults _parseArgs(List<String> args, Map<String, dynamic> environment) {
   parser.addOption('proxy-origin', abbr: 'o', defaultsTo: 'false');
   parser.addOption('exitOnDbError', abbr: 'e', defaultsTo: 'false');
   parser.addOption('roleArn', defaultsTo: environment['AWS_ROLE_ARN']);
-  parser.addOption('roleSessionName', defaultsTo: 'sessionName');
+  parser.addOption('roleSessionName', defaultsTo: 'unpubConnection');
   parser.addOption('webIdentityToken', defaultsTo: environment['AWS_WEB_IDENTITY_TOKEN']);
   parser.addOption('webIdentityTokenFile', defaultsTo: environment['AWS_WEB_IDENTITY_TOKEN_FILE']);
   parser.addOption('bucketName', defaultsTo: environment['AWS_BUCKET_NAME']);
