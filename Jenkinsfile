@@ -119,7 +119,6 @@ pipeline {
                 set +x
                 
                 export ARGOCD_USERNAME=$ARGOCD_USERNAME
-                export ARGOCD_AUTH_TOKEN=$ARGOCD_AUTH_TOKEN
                 export ARGOCD_SERVER=$ARGOCD_SERVER
                 
                 argocd app terminate-op ${env.APP} && echo "Terminate currenc sync for ${env.APP} app" || echo "Don't need terminate ${env.APP} app"
