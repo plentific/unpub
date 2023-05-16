@@ -117,6 +117,11 @@ pipeline {
               env.ARGOCD_AUTH_TOKEN = sh(script: "curl -s https://${env.ARGOCD_SERVER}/api/v1/session -d \$'{\"username\":\"$ARGOCD_USERNAME\",\"password\":\"$ARGOCD_PASSWORD\"}' | sed -e 's/[{}]/''/g' | awk -F: '{print \$2}' | sed 's/\\\"//g'", returnStdout: true).trim()
               sh """                
                 set +x
+                
+                export ARGOCD_USERNAME=$ARGOCD_USERNAME
+                export ARGOCD_AUTH_TOKEN=$ARGOCD_AUTH_TOKEN
+                export ARGOCD_SERVER=$ARGOCD_SERVER
+                
                 argocd app terminate-op ${env.APP} && echo "Terminate currenc sync for ${env.APP} app" || echo "Don't need terminate ${env.APP} app"
                 argocd app sync ${env.APP} --force --prune && echo "Run sync ${env.APP} application" || echo "Don't need sync ${env.APP} app"
                 argocd app wait ${env.APP} --timeout 600 
