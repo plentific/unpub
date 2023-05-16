@@ -113,8 +113,8 @@ pipeline {
       steps {
         container('agent') {
           script {
-            withCredentials([usernamePassword(credentialsId: "argocd-${env.CLUSTER}", usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
-              env.ARGOCD_AUTH_TOKEN = sh(script: "curl -s https://${env.ARGOCD_SERVER}/api/v1/session -d \$'{\"username\":\"$USERNAME\",\"password\":\"$PASSWORD\"}' | sed -e 's/[{}]/''/g' | awk -F: '{print \$2}' | sed 's/\\\"//g'", returnStdout: true).trim()
+            withCredentials([usernamePassword(credentialsId: "argocd-${env.CLUSTER}", usernameVariable: 'ARGOCD_USERNAME', passwordVariable: 'ARGOCD_PASSWORD')]) {
+              env.ARGOCD_AUTH_TOKEN = sh(script: "curl -s https://${env.ARGOCD_SERVER}/api/v1/session -d \$'{\"username\":\"$ARGOCD_USERNAME\",\"password\":\"$ARGOCD_PASSWORD\"}' | sed -e 's/[{}]/''/g' | awk -F: '{print \$2}' | sed 's/\\\"//g'", returnStdout: true).trim()
               sh """                
                 set +x
                 
