@@ -119,8 +119,9 @@ pipeline {
                 set +x
                 
                 #kubectl --context ${env.CLUSTER} apply -f deployment/clusters/${env.CLUSTER_FOLDER}/${env.APP}.yaml -n argocd
-                
-                argocd app terminate-op ${env.APP} && echo "Terminate currenc sync for ${env.APP} app" || echo "Don't need terminate ${env.APP} app"
+                echo "1.Terminate current sync operation"
+                argocd app terminate-op ${env.APP} && echo "Terminate current sync for ${env.APP} app" || echo "Don't need terminate ${env.APP} app"
+                echo "2. Sync application"
                 argocd app sync ${env.APP} --force --prune && echo "Run sync ${env.APP} application" || echo "Don't need sync ${env.APP} app"
                 argocd app wait ${env.APP} --timeout 600 
               """
