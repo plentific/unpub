@@ -67,5 +67,5 @@ class AwsS3Worker {
     return signer.sign(request, credentialScope: scope);
   }
 
-  String _getObjectKey(String name, String version) => '$name/$name-$version.tar.gz';
+  String _getObjectKey(String name, String version) => '$name-$version.tar.gz';
 }
