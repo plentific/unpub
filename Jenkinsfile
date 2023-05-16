@@ -118,7 +118,7 @@ pipeline {
               sh """                
                 set +x
                 
-                kubectl --context ${env.CLUSTER} apply -f deployment/clusters/${env.CLUSTER_FOLDER}/${env.APP}.yaml -n argocd
+                #kubectl --context ${env.CLUSTER} apply -f deployment/clusters/${env.CLUSTER_FOLDER}/${env.APP}.yaml -n argocd
                 
                 argocd app terminate-op ${env.APP} && echo "Terminate currenc sync for ${env.APP} app" || echo "Don't need terminate ${env.APP} app"
                 argocd app sync ${env.APP} --force --prune && echo "Run sync ${env.APP} application" || echo "Don't need sync ${env.APP} app"
