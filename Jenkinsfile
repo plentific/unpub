@@ -39,9 +39,9 @@ pipeline {
     }
 
     stage ('2. Build unpub registry') {
-      /*when {
+      when {
         expression { env.BRANCH_NAME == 'master' }
-      }*/
+      }
       steps {
         container('kaniko') {
           sh """
@@ -57,9 +57,9 @@ pipeline {
     }
 
     stage ('3. Update git repository') {
-      /*when {
+      when {
         expression { env.BRANCH_NAME == 'master' }
-      }*/
+      }
       steps {
         container('agent') {
           script {
@@ -107,9 +107,9 @@ pipeline {
     }
 
     stage ('4. Sync data with ArgoCD') {
-      /*when {
+      when {
         expression { env.BRANCH_NAME == 'master' }
-      }*/
+      }
       steps {
         container('agent') {
           script {
