@@ -2,13 +2,22 @@ name: unpub_aws
 description: A collection of modules to use for deploying unpub into AWS infrastructure.
 version: 0.1.0
 homepage: https://github.com/bytedance/unpub
+publish_to: none
 environment:
   sdk: ">=2.12.0 <3.0.0"
 
 dependencies:
-  unpub: ^2.0.0
-  minio: ^3.0.0
-  http: ^0.13.3
+  unpub: 
+  http: 
+  aws_signature_v4:
+  aws_common:
+  minio: 
+    git:
+      url: https://github.com/plentific/minio-dart
+  aws_sts_api: 
+    git:
+      url: https://github.com/plentific/aws_client.git
+      path: generated/aws_sts_api
 
 dev_dependencies:
   lints: ^1.0.0
@@ -17,7 +26,7 @@ dev_dependencies:
   mockito: ^5.0.16
   build_runner: ^2.1.2
   path: ^1.8.0
-  json_annotation: ^4.1.0
+  json_annotation: ^4.8.0
 # dependency_overrides:
 #   unpub:
 #     path: ../unpub

@@ -12,13 +12,13 @@ pipeline {
   }
 
   environment {
-    ECRURI = '583646779642.dkr.ecr.eu-west-2.amazonaws.com'
+    ECRURI = '538623626928.dkr.ecr.eu-west-1.amazonaws.com'
     APP = 'unpub'
-    AWS_ACCOUNT_ID = "583646779642"
-    AWS_REGION = "eu-west-2"
-    CLUSTER = "staging-uk-eks-k8s"
-    CLUSTER_FOLDER = "staging-uk-eks-k8s"
-    ARGOCD_SERVER = "argocd-staging-uk.plentific.com"
+    AWS_ACCOUNT_ID = "538623626928"
+    AWS_REGION = "eu-west-1"
+    CLUSTER = "devops-ie-eks-k8s"
+    CLUSTER_FOLDER = "devops-ie-eks-k8s"
+    ARGOCD_SERVER = "argocd.devops.plentific.com"
     ARGOCD_OPTS = "--grpc-web"
     TASK = "deploy"
     JENKINS_SERVICE_ACCOUNT = "jenkins"
@@ -117,8 +117,11 @@ pipeline {
               env.ARGOCD_AUTH_TOKEN = sh(script: "curl -s https://${env.ARGOCD_SERVER}/api/v1/session -d \$'{\"username\":\"$ARGOCD_USERNAME\",\"password\":\"$ARGOCD_PASSWORD\"}' | sed -e 's/[{}]/''/g' | awk -F: '{print \$2}' | sed 's/\\\"//g'", returnStdout: true).trim()
               sh """                
                 set +x
-                kubectl --context ${env.CLUSTER} apply -f deployment/clusters/${env.CLUSTER_FOLDER}/${env.APP}.yaml -n argocd
-                argocd app terminate-op ${env.APP} && echo "Terminate currenc sync for ${env.APP} app" || echo "Don't need terminate ${env.APP} app"
+                
+                #kubectl --context ${env.CLUSTER} apply -f deployment/clusters/${env.CLUSTER_FOLDER}/${env.APP}.yaml -n argocd
+                echo "1.Terminate current sync operation"
+                argocd app terminate-op ${env.APP} && echo "Terminate current sync for ${env.APP} app" || echo "Don't need terminate ${env.APP} app"
+                echo "2. Sync application"
                 argocd app sync ${env.APP} --force --prune && echo "Run sync ${env.APP} application" || echo "Don't need sync ${env.APP} app"
                 argocd app wait ${env.APP} --timeout 600 
               """
