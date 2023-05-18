@@ -14,6 +14,7 @@ class S3StoreIamStore extends PackageStore {
   final Map<String, String> _env;
   late final String _bucketName;
   late final String _region;
+  late final AwsS3Worker s3;
 
   Credentials? _credentials;
 
@@ -29,6 +30,7 @@ class S3StoreIamStore extends PackageStore {
   }) : _env = environment ?? Platform.environment {
     _region = region ?? _env['AWS_REGION'] ?? 'eu-west-1';
     _bucketName = bucketName ?? _env['AWS_BUCKET_NAME'] ?? '';
+    s3 = AwsS3Worker(region: _region, bucket: _bucketName);
 
     if (webIdentity.roleArn.isEmpty ||
         webIdentity.webIdentityToken.isEmpty ||
@@ -86,16 +88,20 @@ class S3StoreIamStore extends PackageStore {
 
   @override
   Future<void> upload(String name, String version, List<int> content) async {
-    final s3 = AwsS3Worker(region: _region, bucket: _bucketName);
-    s3.credentials = _credentials!;
-    await s3.upload(name: name, version: version, content: content);
+    await (s3
+        .upload(
+          name: name,
+          version: version,
+          content: content,
+          credentials: _credentials,
+        )
+        .first);
     return;
   }
 
   @override
   Stream<List<int>> download(String name, String version) async* {
     final s3 = AwsS3Worker(region: _region, bucket: _bucketName);
-    s3.credentials = _credentials!;
-    yield* s3.download(name: name, version: version);
+    yield* s3.download(name: name, version: version, credentials: _credentials);
   }
 }
