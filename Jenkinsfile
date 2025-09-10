@@ -2,7 +2,6 @@ pipeline {
   agent {
     kubernetes {
       defaultContainer 'agent'
-      // yaml agentPod("2", "8Gi", "2", "8Gi", "jenkins-slave")
       yaml agentPodBuildkit()
     }
   }
@@ -40,25 +39,7 @@ pipeline {
         }
       }
     }
-
-    // stage ('2. Build unpub registry') {
-    //   when {
-    //     expression { env.BRANCH_NAME == 'master' }
-    //   }
-    //   steps {
-    //     container('kaniko') {
-    //       sh """
-    //         /kaniko/executor \
-    //           -f `pwd`/docker/Dockerfile \
-    //           -c `pwd` \
-    //           --cache=false \
-    //           --cache-repo=${env.ECRURI}/kaniko \
-    //           --destination=${env.ECRURI}/${env.APP}:dart-${env.GIT_COMMIT}
-    //       """
-    //     }
-    //   }
-    // }
-    stage ('3. Build and Push Unpub') {
+    stage ('2. Build and Push Unpub') {
         steps {
             container('agent') {
                 sh """
