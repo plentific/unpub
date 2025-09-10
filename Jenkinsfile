@@ -23,6 +23,7 @@ pipeline {
     ARGOCD_OPTS = "--grpc-web"
     TASK = "deploy"
     BUILD_ARCH = "amd64"
+    APP_TAR_TAG = "artifact.tar"
     JENKINS_SERVICE_ACCOUNT = "jenkins"
     JENKINS_URL_SUPPORT_INSTANCE = "https://jenkins.devops.plentific.com/"
   }
