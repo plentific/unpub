@@ -22,6 +22,7 @@ pipeline {
     ARGOCD_SERVER = "argocd.devops.plentific.com"
     ARGOCD_OPTS = "--grpc-web"
     TASK = "deploy"
+    BUILD_ARCH = "amd64"
     JENKINS_SERVICE_ACCOUNT = "jenkins"
     JENKINS_URL_SUPPORT_INSTANCE = "https://jenkins.devops.plentific.com/"
   }
