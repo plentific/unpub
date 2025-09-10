@@ -2,7 +2,8 @@ pipeline {
   agent {
     kubernetes {
       defaultContainer 'agent'
-      yaml agentPod("2", "8Gi", "2", "8Gi", "jenkins-slave")
+      // yaml agentPod("2", "8Gi", "2", "8Gi", "jenkins-slave")
+      yaml agentPodBuildkit
     }
   }
 
