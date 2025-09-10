@@ -3,7 +3,7 @@ pipeline {
     kubernetes {
       defaultContainer 'agent'
       // yaml agentPod("2", "8Gi", "2", "8Gi", "jenkins-slave")
-      yaml agentPodBuildkit
+      yaml agentPodBuildkit()
     }
   }
 
@@ -39,23 +39,62 @@ pipeline {
       }
     }
 
-    stage ('2. Build unpub registry') {
-      when {
-        expression { env.BRANCH_NAME == 'master' }
-      }
-      steps {
-        container('kaniko') {
-          sh """
-            /kaniko/executor \
-              -f `pwd`/docker/Dockerfile \
-              -c `pwd` \
-              --cache=false \
-              --cache-repo=${env.ECRURI}/kaniko \
-              --destination=${env.ECRURI}/${env.APP}:dart-${env.GIT_COMMIT}
-          """
+    // stage ('2. Build unpub registry') {
+    //   when {
+    //     expression { env.BRANCH_NAME == 'master' }
+    //   }
+    //   steps {
+    //     container('kaniko') {
+    //       sh """
+    //         /kaniko/executor \
+    //           -f `pwd`/docker/Dockerfile \
+    //           -c `pwd` \
+    //           --cache=false \
+    //           --cache-repo=${env.ECRURI}/kaniko \
+    //           --destination=${env.ECRURI}/${env.APP}:dart-${env.GIT_COMMIT}
+    //       """
+    //     }
+    //   }
+    // }
+    stage ('3. Build and Push Unpub') {
+        steps {
+            container('agent') {
+                sh """
+                    docker buildx create --name=kube --driver=kubernetes --platform linux/amd64 --node=buildkit-builder-amd64 --use
+                """
+                sh """
+                    docker buildx build \
+                        --progress plain \
+                        --file `pwd`/docker/Dockerfile \
+                        --platform="linux/amd64" \
+                        --output type=docker,dest=$WORKSPACE/$APP-$BUILD_ARCH-$APP_TAR_TAG \
+                        `pwd`
+                """
+                sh """
+                    ls -lah $WORKSPACE/
+                """
+                script {
+                    env.DEVOPS_ECR_REGISTRY_PASSWORD = sh(returnStdout: true, script: "aws ecr get-login-password --region ${env.AWS_REGION}").trim()
+                    print("Check if artifact exists in devops-ie account ECR repository")
+                    env.CHECK_IF_ARTIFACT_EXISTS = sh(
+                        returnStdout: true,
+                        script: "aws ecr batch-get-image --registry-id=${env.AWS_ACCOUNT_ID} --repository-name=${env.APP} --image-ids=imageTag=dart-${env.GIT_COMMIT} --query 'images[].imageId.imageTag' --output text --region ${env.AWS_REGION}"
+                        ).trim()
+                    println("CHECK_IF_ARTIFACT_EXISTS: ${env.CHECK_IF_ARTIFACT_EXISTS}")
+                }
+            }
+            container('crane'){
+                script {
+                    if (env.CHECK_IF_ARTIFACT_EXISTS == "") {
+                        sh(script: "crane auth login -u AWS -p ${env.DEVOPS_ECR_REGISTRY_PASSWORD} ${env.AWS_ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com")
+                        sh(returnStdout: true, script: "crane push $WORKSPACE/$APP-$BUILD_ARCH-$APP_TAR_TAG ${env.AWS_ACCOUNT_ID}.dkr.ecr.${env.AWS_REGION}.amazonaws.com/$APP:dart-${env.GIT_COMMIT}")
+                    }else{
+                        print("Artifact image ${env.CHECK_IF_ARTIFACT_EXISTS} already exists in ECR, skipping push.")
+                    }
+                }
+            }
         }
-      }
-    }
+    } // stage
 
     stage ('3. Update git repository') {
       when {
