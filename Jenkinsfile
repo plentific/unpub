@@ -43,7 +43,7 @@ pipeline {
         steps {
             container('agent') {
                 sh """
-                    docker buildx create --name=kube --driver=kubernetes --platform linux/amd64 --node=buildkit-builder-amd64 --use
+                    docker buildx create --name=kube --driver=kubernetes --driver-opt namespace=buildkit --platform linux/amd64 --node=buildkit-builder-amd64 --use
                 """
                 sh """
                     docker buildx build \
