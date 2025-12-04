@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:aws_common/aws_common.dart';
 import 'package:aws_signature_v4/aws_signature_v4.dart';
@@ -22,7 +23,7 @@ class AwsS3Worker {
     try {
       final request = AWSStreamedHttpRequest.put(
         Uri.https('s3.$region.amazonaws.com', '/$bucket/${_getObjectKey(name, version)}'),
-        body: Stream.value(content),
+        body: Stream.value(Uint8List.fromList(content)),
       );
       final signedRequest = await _signRequest(credentials: credentials, request: request);
       final response = await signedRequest.send().response;

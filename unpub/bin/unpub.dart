@@ -58,8 +58,16 @@ Future<MongoStore> _createAndInitMongoDbStore(
   String? tlsCertificateKeyFile,
   String? tlsCertificateKeyFilePassword,
 }) async {
+  String modifiedUri = dbUri;
+  final uri = Uri.parse(dbUri);
+  if (!uri.queryParameters.containsKey('authMechanism')) {
+    final queryParams = Map<String, String>.from(uri.queryParameters);
+    queryParams['authMechanism'] = 'SCRAM-SHA-1';
+    modifiedUri = uri.replace(queryParameters: queryParams).toString();
+  }
+
   final mongoDbStore = MongoStore(
-    Db(dbUri),
+    Db(modifiedUri),
     onDatabaseError: exitOnDbError
         ? (error) {
             print('Database error: $error Exiting...');

@@ -2,7 +2,15 @@ import 'package:mongo_dart/mongo_dart.dart';
 import 'package:unpub/unpub.dart' as unpub;
 
 main(List<String> args) async {
-  final db = Db('mongodb://localhost:27017/dart_pub');
+  String dbUri = 'mongodb://localhost:27017/dart_pub';
+  final uri = Uri.parse(dbUri);
+  if (!uri.queryParameters.containsKey('authMechanism')) {
+    final queryParams = Map<String, String>.from(uri.queryParameters);
+    queryParams['authMechanism'] = 'SCRAM-SHA-1';
+    dbUri = uri.replace(queryParameters: queryParams).toString();
+  }
+
+  final db = Db(dbUri);
   await db.open(); // make sure the MongoDB connection opened
 
   final app = unpub.App(
