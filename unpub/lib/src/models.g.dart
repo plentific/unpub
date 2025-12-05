@@ -1,5 +1,5 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
-// @dart=3.8
+
 
 part of 'models.dart';
 
@@ -21,10 +21,10 @@ Map<String, dynamic> _$UnpubVersionToJson(UnpubVersion instance) =>
     <String, dynamic>{
       'version': instance.version,
       'pubspec': instance.pubspec,
-      'pubspecYaml': ?instance.pubspecYaml,
-      'uploader': ?instance.uploader,
-      'readme': ?instance.readme,
-      'changelog': ?instance.changelog,
+      'pubspecYaml': instance.pubspecYaml,
+      'uploader': instance.uploader,
+      'readme': instance.readme,
+      'changelog': instance.changelog,
       'createdAt': identity(instance.createdAt),
     };
 
