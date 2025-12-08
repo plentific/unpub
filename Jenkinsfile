@@ -50,6 +50,7 @@ pipeline {
                         --progress plain \
                         --file `pwd`/docker/Dockerfile \
                         --platform="linux/amd64" \
+                        --no-cache \
                         --output type=docker,dest=$WORKSPACE/$APP-$BUILD_ARCH-$APP_TAR_TAG \
                         `pwd`
                 """
