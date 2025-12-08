@@ -7,7 +7,7 @@ part of 'models.dart';
 // **************************************************************************
 
 ListApi _$ListApiFromJson(Map<String, dynamic> json) => ListApi(
-      json['count'] as int,
+      (json['count'] as num).toInt(),
       (json['packages'] as List<dynamic>)
           .map((e) => ListApiPackage.fromJson(e as Map<String, dynamic>))
           .toList(),

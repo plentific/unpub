@@ -1,6 +1,7 @@
-import 'package:mongo_dart/mongo_dart.dart';
 import 'package:intl/intl.dart';
+import 'package:mongo_dart/mongo_dart.dart';
 import 'package:unpub/src/models.dart';
+
 import 'meta_store.dart';
 
 final packageCollection = 'packages';
@@ -14,27 +15,10 @@ class MongoStore extends MetaStore {
 
   static SelectorBuilder _selectByName(String? name) => where.eq('name', name);
 
-  Future<UnpubQueryResult> _queryPackagesBySelector(
-      SelectorBuilder selector) async {
-    try {
-      final count = await db.collection(packageCollection).count(selector);
-      final packages = await db
-          .collection(packageCollection)
-          .find(selector)
-          .map((item) => UnpubPackage.fromJson(item))
-          .toList();
-      return UnpubQueryResult(count, packages);
-    } catch (e) {
-      onDatabaseError?.call(e.toString());
-      return Future.error(e);
-    }
-  }
-
   @override
   queryPackage(name) async {
     try {
-      var json =
-          await db.collection(packageCollection).findOne(_selectByName(name));
+      var json = await db.collection(packageCollection).findOne(_selectByName(name));
       if (json == null) return null;
       return UnpubPackage.fromJson(json);
     } catch (e) {
@@ -65,9 +49,7 @@ class MongoStore extends MetaStore {
   @override
   addUploader(name, email) async {
     try {
-      await db
-          .collection(packageCollection)
-          .update(_selectByName(name), modify.push('uploaders', email));
+      await db.collection(packageCollection).update(_selectByName(name), modify.push('uploaders', email));
     } catch (e) {
       onDatabaseError?.call(e.toString());
       return Future.error(e);
@@ -77,9 +59,7 @@ class MongoStore extends MetaStore {
   @override
   removeUploader(name, email) async {
     try {
-      await db
-          .collection(packageCollection)
-          .update(_selectByName(name), modify.pull('uploaders', email));
+      await db.collection(packageCollection).update(_selectByName(name), modify.pull('uploaders', email));
     } catch (e) {
       onDatabaseError?.call(e.toString());
       return Future.error(e);
@@ -90,12 +70,8 @@ class MongoStore extends MetaStore {
   increaseDownloads(name, version) {
     try {
       var today = DateFormat('yyyyMMdd').format(DateTime.now());
-      db
-          .collection(packageCollection)
-          .update(_selectByName(name), modify.inc('download', 1));
-      db
-          .collection(statsCollection)
-          .update(_selectByName(name), modify.inc('d$today', 1));
+      db.collection(packageCollection).update(_selectByName(name), modify.inc('download', 1));
+      db.collection(statsCollection).update(_selectByName(name), modify.inc('d$today', 1));
     } catch (e) {
       onDatabaseError?.call(e.toString());
       return;
@@ -110,19 +86,19 @@ class MongoStore extends MetaStore {
     keyword,
     uploader,
     dependency,
-  }) {
+  }) async {
     try {
-      var selector =
-          where.sortBy(sort, descending: true).limit(size).skip(page * size);
+      // Build base selector for filtering
+      SelectorBuilder baseSelector = where;
 
       if (keyword != null) {
-        selector = selector.match('name', '.*$keyword.*');
+        baseSelector = baseSelector.match('name', '.*$keyword.*');
       }
       if (uploader != null) {
-        selector = selector.eq('uploaders', uploader);
+        baseSelector = baseSelector.eq('uploaders', uploader);
       }
       if (dependency != null) {
-        selector = selector.raw({
+        baseSelector = baseSelector.raw({
           'versions': {
             r'$elemMatch': {
               'pubspec.dependencies.$dependency': {r'$exists': true}
@@ -131,7 +107,23 @@ class MongoStore extends MetaStore {
         });
       }
 
-      return _queryPackagesBySelector(selector);
+      // MongoDB 5.0 compatibility: count() method is deprecated.
+      // MongoDB added countDocuments() and estimatedDocumentCount() as replacements,
+      // but mongo_dart doesn't expose these methods yet. Use manual counting instead.
+      final allDocsForCount = await db.collection(packageCollection).find(baseSelector).toList();
+      final count = allDocsForCount.length;
+
+      // Build selector with pagination and sorting for fetching results
+      final dataSelector = baseSelector.sortBy(sort, descending: true).limit(size).skip(page * size);
+
+      // Fetch paginated results
+      final packages = await db
+          .collection(packageCollection)
+          .find(dataSelector)
+          .map((item) => UnpubPackage.fromJson(item))
+          .toList();
+
+      return UnpubQueryResult(count, packages);
     } catch (e) {
       onDatabaseError?.call(e.toString());
       return Future.error(e);

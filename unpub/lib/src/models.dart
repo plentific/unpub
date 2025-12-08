@@ -26,8 +26,7 @@ class UnpubVersion {
     this.createdAt,
   );
 
-  factory UnpubVersion.fromJson(Map<String, dynamic> map) =>
-      _$UnpubVersionFromJson(map);
+  factory UnpubVersion.fromJson(Map<String, dynamic> map) => _$UnpubVersionFromJson(map);
 
   Map<String, dynamic> toJson() => _$UnpubVersionToJson(this);
 }
@@ -57,8 +56,7 @@ class UnpubPackage {
     this.download,
   );
 
-  factory UnpubPackage.fromJson(Map<String, dynamic> map) =>
-      _$UnpubPackageFromJson(map);
+  factory UnpubPackage.fromJson(Map<String, dynamic> map) => _$UnpubPackageFromJson(map);
 }
 
 @JsonSerializable()
@@ -68,6 +66,5 @@ class UnpubQueryResult {
 
   UnpubQueryResult(this.count, this.packages);
 
-  factory UnpubQueryResult.fromJson(Map<String, dynamic> map) =>
-      _$UnpubQueryResultFromJson(map);
+  factory UnpubQueryResult.fromJson(Map<String, dynamic> map) => _$UnpubQueryResultFromJson(map);
 }
