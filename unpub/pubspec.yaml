@@ -9,33 +9,39 @@ environment:
 executables:
   unpub: unpub
 dependencies:
-  args: ^2.2.0
-  shelf: ^1.2.0
-  shelf_router: ^1.1.1
-  http_parser: ^4.0.0
-  http: ^0.13.3
-  archive: ^3.1.2
-  logging: ^1.0.1
-  meta: ^1.1.7
-  googleapis: ^4.0.0
-  yaml: ^3.1.0
-  pub_semver: ^2.0.0
-  json_annotation: ^4.8.0
+  args: ^2.7.0
+  shelf: ^1.4.2
+  shelf_router: ^1.1.4
+  http_parser: ^4.1.2
+  http: ^1.6.0
+  archive: ^4.3.0
+  logging: ^1.3.0
+  meta: ^1.19.0
+  googleapis: ^17.0.0
+  yaml: ^3.1.4
+  pub_semver: ^2.2.1
+  json_annotation: ^4.12.0
   mongo_dart:
     git:
       url: https://github.com/plentific/mongo_dart.git
       ref: c18deaabd7132e71b2d9524b0307449d71ca3c3e
-  mime: ^1.0.0
-  intl: ^0.17.0
-  path: ^1.6.2
-  collection: ^1.15.0
-  shelf_cors_headers: ^0.1.2
+  mime: ^2.1.0
+  intl: ^0.20.3
+  path: ^1.9.1
+  collection: ^1.19.1
+  shelf_cors_headers: ^0.1.5
   unpub_aws: 
     path: ../unpub_aws
 
 dev_dependencies:
-  test: ^1.6.1
-  build_runner: ^2.1.1
-  json_serializable: ^6.6.0
-  shelf_router_generator: ^1.0.1
-  chunked_stream: ^1.4.1
+  test: ^1.32.0
+  build_runner: ^2.16.2
+  json_serializable: ^6.14.1
+  shelf_router_generator: ^1.1.5
+  chunked_stream: ^1.4.2
+
+dependency_overrides:
+  # The mongo_dart fork still asks for uuid ^3.0.0, which holds aws_common and
+  # aws_signature_v4 back. Its only use is Uuid().v4() in GridFS, unchanged in
+  # uuid 4 and unused by unpub. Drop this once the fork allows uuid 4.
+  uuid: ^4.5.1
