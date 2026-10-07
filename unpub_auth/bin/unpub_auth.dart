@@ -11,8 +11,20 @@ void main(List<String> arguments) async {
   parser.addCommand('logout');
   parser.addCommand('migrate');
   parser.addCommand('get');
+  parser.addFlag('help', abbr: 'h', negatable: false, help: 'Show this usage.');
 
-  final result = parser.parse(arguments);
+  final ArgResults result;
+  try {
+    result = parser.parse(arguments);
+  } on FormatException catch (e) {
+    stderr.writeln(e.message);
+    _printUsage();
+    exit(64);
+  }
+  if (result['help'] == true) {
+    _printUsage();
+    exit(0);
+  }
 
   unpub_auth.Flow flow = unpub_auth.Flow.getToken;
 
@@ -37,8 +49,17 @@ void main(List<String> arguments) async {
       flow = unpub_auth.Flow.getToken;
       break;
     default:
-      stdout.write(
-        format('''
+      _printUsage();
+      exit(0);
+  }
+
+  await unpub_auth.run(flow: flow, args: subArgs);
+  exit(0);
+}
+
+void _printUsage() {
+  stdout.write(
+    format('''
 An auth tool for unpub. unpub is using Google OAuth2 by default. There's two situations where the unpub_auth can be used.
 
 {@yellow}1. Login locally, and publish pub packages locally.{@end}
@@ -60,10 +81,5 @@ Available commands:
   {@green}logout{@end}          Delete local credentials file.
   {@green}migrate{@end} {@green}<path>{@end}  Migrate existed credentials file from path.
 '''),
-      );
-      exit(0);
-  }
-
-  await unpub_auth.run(flow: flow, args: subArgs);
-  exit(0);
+  );
 }
