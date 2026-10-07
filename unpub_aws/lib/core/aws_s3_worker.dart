@@ -15,27 +15,21 @@ class AwsS3Worker {
   final String region;
   final String bucket;
 
-  Stream<List<int>> upload({
+  Future<void> upload({
     required String name,
     required String version,
     required List<int> content,
     required AwsCredentials credentials,
-  }) async* {
-    try {
-      final request = AWSStreamedHttpRequest.put(
-        Uri.https('s3.$region.amazonaws.com', '/$bucket/${_getObjectKey(name, version)}'),
-        body: Stream.value(Uint8List.fromList(content)),
-      );
-      final signedRequest = await _signRequest(credentials: credentials, request: request);
-      final response = await signedRequest.send().response;
-      if (response.statusCode == HttpStatus.ok) {
-        yield 'File uploaded'.codeUnits;
-      } else {
-        throw Exception(
-            'S3 file upload error. Status code ${response.statusCode}. \n${await response.bodyBytes}');
-      }
-    } catch (e, s) {
-      throw Exception('S3 file upload error. Error: $e. \n$s');
+  }) async {
+    final request = AWSStreamedHttpRequest.put(
+      _objectUri(name, version),
+      body: Stream.value(Uint8List.fromList(content)),
+    );
+    final signedRequest = await _signRequest(credentials: credentials, request: request);
+    final response = await signedRequest.send().response;
+    if (response.statusCode != HttpStatus.ok) {
+      throw Exception('S3 file upload error. Status code ${response.statusCode}. \n'
+          '${utf8.decode(await response.bodyBytes, allowMalformed: true)}');
     }
   }
 
@@ -44,9 +38,7 @@ class AwsS3Worker {
     required String version,
     required AwsCredentials credentials,
   }) async* {
-    final request = AWSStreamedHttpRequest.get(
-      Uri.https('s3.$region.amazonaws.com', '/$bucket/${_getObjectKey(name, version)}'),
-    );
+    final request = AWSStreamedHttpRequest.get(_objectUri(name, version));
     final signedRequest = await _signRequest(credentials: credentials, request: request);
     final response = await signedRequest.send().response;
     // Without this check an S3 error (e.g. 403 for expired credentials) is
@@ -77,6 +69,9 @@ class AwsS3Worker {
     );
     return signer.sign(request, credentialScope: scope);
   }
+
+  Uri _objectUri(String name, String version) =>
+      Uri.https('s3.$region.amazonaws.com', '/$bucket/${_getObjectKey(name, version)}');
 
   String _getObjectKey(String name, String version) => '$name-$version.tar.gz'.replaceAll('+', '.');
 }

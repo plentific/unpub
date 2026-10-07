@@ -21,7 +21,7 @@ final class S3StoreIamStore implements PackageStore {
 
   @override
   Future<void> upload(String name, String version, List<int> content) async {
-    await _s3.upload(name: name, version: version, content: content, credentials: _credentials.current).first;
+    await _s3.upload(name: name, version: version, content: content, credentials: _credentials.current);
   }
 
   @override
