@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:archive/archive.dart';
 import 'package:http/http.dart' as http;
@@ -163,6 +164,54 @@ main() {
     expect(response.headers['location'], contains('error=version%20invalid'));
     expect(metaStore.packages, isEmpty);
     expect(directory.listSync(recursive: true), isEmpty);
+  });
+
+  test('rejects an archive larger than the upload limit', () async {
+    final directory = await Directory.systemTemp.createTemp('unpub_app');
+    addTearDown(() => directory.delete(recursive: true));
+    final metaStore = _MemoryMetaStore();
+    final publisher = _Publisher(
+      unpub.App(
+        metaStore: metaStore,
+        packageStore: unpub.FileStore(directory.path),
+        overrideUploaderEmail: 'publisher@example.com',
+        maxArchiveBytes: 4 * 1024,
+      ),
+    );
+    final random = Random(42);
+    final incompressible = List.generate(16 * 1024, (index) => random.nextInt(256));
+
+    final response = await publisher.publish(
+      _PackageArchive(pubspecYaml: 'name: unpub_fixture\nversion: 1.0.0\n', data: incompressible).bytes(),
+    );
+
+    expect(response.headers['location'], contains('error=package%20archive%20is%20larger%20than'));
+    expect(metaStore.packages, isEmpty);
+  });
+
+  test('rejects an archive that unpacks to more than the limit', () async {
+    final directory = await Directory.systemTemp.createTemp('unpub_app');
+    addTearDown(() => directory.delete(recursive: true));
+    final metaStore = _MemoryMetaStore();
+    final publisher = _Publisher(
+      unpub.App(
+        metaStore: metaStore,
+        packageStore: unpub.FileStore(directory.path),
+        overrideUploaderEmail: 'publisher@example.com',
+        maxUnpackedBytes: 64 * 1024,
+      ),
+    );
+    // A megabyte of zeros packs into about a kilobyte.
+    final archive = _PackageArchive(
+      pubspecYaml: 'name: unpub_fixture\nversion: 1.0.0\n',
+      data: List.filled(1024 * 1024, 0),
+    ).bytes();
+
+    final response = await publisher.publish(archive);
+
+    expect(archive.length, lessThan(16 * 1024));
+    expect(response.headers['location'], contains('error=unpacked%20package%20is%20larger%20than'));
+    expect(metaStore.packages, isEmpty);
   });
 
   test('answers 404 for a package it does not have, instead of sending the client elsewhere', () async {

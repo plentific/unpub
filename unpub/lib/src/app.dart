@@ -36,6 +36,12 @@ class App {
   /// What to answer for packages this server does not have: 404 by default.
   final MissingPackages missingPackages;
 
+  /// Largest upload accepted, in bytes. pub.dev allows 100 MB archives.
+  final int maxArchiveBytes;
+
+  /// Largest size an uploaded archive may unpack to, in bytes.
+  final int maxUnpackedBytes;
+
   /// http(s) proxy to call googleapis (to get uploader email)
   final String? googleapisProxy;
   final String? overrideUploaderEmail;
@@ -52,6 +58,8 @@ class App {
     required this.metaStore,
     required this.packageStore,
     this.missingPackages = const RejectMissingPackages(),
+    this.maxArchiveBytes = 100 * 1024 * 1024,
+    this.maxUnpackedBytes = 256 * 1024 * 1024,
     this.googleapisProxy,
     this.overrideUploaderEmail,
     this.uploadValidator,
@@ -79,6 +87,27 @@ class App {
 
   /// A valid Dart package name: lowercase letters, digits and underscores.
   final _packageName = RegExp(r'^[a-z_][a-z0-9_]*$');
+
+  /// Passes [stream] on, failing once it carried more than [limit] bytes, so
+  /// an oversized or highly compressed upload cannot exhaust the memory.
+  Stream<List<int>> _limited(Stream<List<int>> stream, int limit, String content) async* {
+    var bytes = 0;
+    await for (final chunk in stream) {
+      bytes += chunk.length;
+      if (bytes > limit) {
+        throw '$content is larger than ${limit ~/ (1024 * 1024)} MB';
+      }
+      yield chunk;
+    }
+  }
+
+  Future<Uint8List> _bytesOf(Stream<List<int>> stream) async {
+    final bytes = BytesBuilder(copy: false);
+    await for (final chunk in stream) {
+      bytes.add(chunk);
+    }
+    return bytes.takeBytes();
+  }
 
   bool _isSemanticVersion(String version) {
     try {
@@ -246,7 +275,7 @@ class App {
 
       // The map below makes the runtime type checker happy.
       // https://github.com/dart-lang/pub-dev/blob/19033f8154ca1f597ef5495acbc84a2bb368f16d/app/lib/fake/server/fake_storage_server.dart#L74
-      final stream = req.read().map((a) => a).transform(transformer);
+      final stream = _limited(req.read(), maxArchiveBytes, 'package archive').map((a) => a).transform(transformer);
       await for (var part in stream) {
         if (fileData != null) continue;
         fileData = part;
@@ -254,7 +283,9 @@ class App {
 
       var bb = await fileData!.fold(BytesBuilder(), (BytesBuilder byteBuilder, d) => byteBuilder..add(d));
       var tarballBytes = bb.takeBytes();
-      var tarBytes = GZipDecoder().decodeBytes(tarballBytes);
+      var tarBytes = await _bytesOf(
+        _limited(Stream<List<int>>.value(tarballBytes).transform(gzip.decoder), maxUnpackedBytes, 'unpacked package'),
+      );
       var archive = TarDecoder().decodeBytes(tarBytes);
       ArchiveFile? pubspecArchiveFile;
       ArchiveFile? readmeFile;
