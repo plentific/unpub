@@ -95,38 +95,18 @@ class MongoStore extends MetaStore {
     dependency,
   }) async {
     try {
-      // Build base selector for filtering
-      SelectorBuilder baseSelector = where;
-
-      if (keyword != null) {
-        baseSelector = baseSelector.match('name', '.*${RegExp.escape(keyword)}.*');
-      }
-      if (uploader != null) {
-        baseSelector = baseSelector.eq('uploaders', uploader);
-      }
-      if (dependency != null) {
-        baseSelector = baseSelector.raw({
-          'versions': {
-            r'$elemMatch': {
-              'pubspec.dependencies.$dependency': {r'$exists': true}
-            }
-          }
-        });
-      }
-
-      // MongoDB 5.0 compatibility: count() method is deprecated.
-      // MongoDB added countDocuments() and estimatedDocumentCount() as replacements,
-      // but mongo_dart doesn't expose these methods yet. Use manual counting instead.
-      final allDocsForCount = await db.collection(packageCollection).find(baseSelector).toList();
-      final count = allDocsForCount.length;
-
-      // Build selector with pagination and sorting for fetching results
-      final dataSelector = baseSelector.sortBy(sort, descending: true).limit(size).skip(page * size);
-
-      // Fetch paginated results
+      // Only the ids: a package document holds every version with its readme
+      // and changelog, and only their number is needed here.
+      final count = await db
+          .collection(packageCollection)
+          .find(_packagesMatching(keyword, uploader, dependency).fields(['_id']))
+          .length;
       final packages = await db
           .collection(packageCollection)
-          .find(dataSelector)
+          .find(_packagesMatching(keyword, uploader, dependency)
+              .sortBy(sort, descending: true)
+              .limit(size)
+              .skip(page * size))
           .map((item) => UnpubPackage.fromJson(item))
           .toList();
 
@@ -135,5 +115,27 @@ class MongoStore extends MetaStore {
       onDatabaseError?.call(e.toString());
       return Future.error(e);
     }
+  }
+
+  /// A new selector for every query: projecting, sorting and paging change
+  /// the selector they are called on.
+  SelectorBuilder _packagesMatching(String? keyword, String? uploader, String? dependency) {
+    var selector = where;
+    if (keyword != null) {
+      selector = selector.match('name', '.*${RegExp.escape(keyword)}.*');
+    }
+    if (uploader != null) {
+      selector = selector.eq('uploaders', uploader);
+    }
+    if (dependency != null) {
+      selector = selector.raw({
+        'versions': {
+          r'$elemMatch': {
+            'pubspec.dependencies.$dependency': {r'$exists': true}
+          }
+        }
+      });
+    }
+    return selector;
   }
 }
