@@ -38,6 +38,20 @@ class MongoStore extends MetaStore {
     }
   }
 
+  /// Creates the indexes lookups use. Unique package names also stop two
+  /// concurrent first publishes of a package from creating two documents.
+  Future<void> createIndexes() async {
+    for (var (collection, keys) in [
+      (packageCollection, {'name': 1}),
+      (docsCollection, {'name': 1, 'version': 1}),
+    ]) {
+      var reply = await db.collection(collection).createIndex(keys: keys, unique: true);
+      if (reply['ok'] != 1.0) {
+        throw MongoDartError('Could not create the unique index $keys on $collection: ${reply['errmsg']}');
+      }
+    }
+  }
+
   @override
   Future<VersionDocs> queryVersionDocs(String name, String version) async {
     try {

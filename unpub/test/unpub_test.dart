@@ -219,6 +219,25 @@ main() {
     });
   });
 
+  group('indexes', () {
+    setUpAll(() async {
+      await _cleanUpDb();
+      _server = await createServer(email0);
+    });
+
+    tearDownAll(() async {
+      await _server.close();
+    });
+
+    test('keep one document per package name', () async {
+      await pubPublish(package0, '0.0.1');
+
+      var duplicate = await _db.collection(packageCollection).insertOne({'name': package0});
+
+      expect(duplicate.isSuccess, isFalse);
+    });
+  });
+
   group('get versions', () {
     setUpAll(() async {
       await _cleanUpDb();

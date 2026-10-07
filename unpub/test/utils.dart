@@ -20,6 +20,7 @@ createServer(String opEmail) async {
   final db = Db('mongodb://localhost:27017/dart_pub_test');
   await db.open();
   var mongoStore = unpub.MongoStore(db);
+  await mongoStore.createIndexes();
 
   var app = unpub.App(metaStore: mongoStore, packageStore: unpub.FileStore(baseDir), overrideUploaderEmail: opEmail);
 

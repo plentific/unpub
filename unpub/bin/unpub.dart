@@ -98,18 +98,23 @@ Future<unpub.MetaStore> _createAndInitMongoDbStore(
   final connection = unpub.DbConnection(db: db, transport: transport);
   await connection.open();
 
-  return unpub.ReconnectingMetaStore(
-    store: MongoStore(
-      db,
-      onDatabaseError: exitOnDbError
-          ? (error) {
-              print('Database error: $error Exiting...');
-              exit(1);
-            }
-          : null,
-    ),
-    connection: connection,
+  final mongoStore = MongoStore(
+    db,
+    onDatabaseError: exitOnDbError
+        ? (error) {
+            print('Database error: $error Exiting...');
+            exit(1);
+          }
+        : null,
   );
+  try {
+    await mongoStore.createIndexes();
+  } catch (e) {
+    // E.g. two documents with the same package name, from before the index.
+    print('Could not create the database indexes, serving without them: $e');
+  }
+
+  return unpub.ReconnectingMetaStore(store: mongoStore, connection: connection);
 }
 
 ArgResults _parseArgs(List<String> args, Map<String, dynamic> environment) {
