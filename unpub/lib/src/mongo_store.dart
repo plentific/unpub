@@ -1,11 +1,9 @@
-import 'package:intl/intl.dart';
 import 'package:mongo_dart/mongo_dart.dart';
 import 'package:unpub/src/models.dart';
 
 import 'meta_store.dart';
 
 final packageCollection = 'packages';
-final statsCollection = 'stats';
 
 class MongoStore extends MetaStore {
   Db db;
@@ -77,11 +75,7 @@ class MongoStore extends MetaStore {
 
   Future<void> _countDownload(String name, String version) async {
     try {
-      var today = DateFormat('yyyyMMdd').format(DateTime.now());
-      await Future.wait([
-        db.collection(packageCollection).update(_selectByName(name), modify.inc('download', 1)),
-        db.collection(statsCollection).update(_selectByName(name), modify.inc('d$today', 1)),
-      ]);
+      await db.collection(packageCollection).update(_selectByName(name), modify.inc('download', 1));
     } catch (e) {
       print('Failed to count the download of $name $version: $e');
       onDatabaseError?.call(e.toString());

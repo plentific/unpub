@@ -40,7 +40,6 @@ main() {
 
   _cleanUpDb() async {
     await _db.dropCollection(packageCollection);
-    await _db.dropCollection(statsCollection);
   }
 
   tearDownAll(() async {
