@@ -34,6 +34,10 @@ The server logs to standard output, which is the pod's log (ArgoCD shows it too)
 - `Could not create the database indexes, serving without them: …`: usually two documents with the same package name.
 - `SIGTERM received, closing the server`: Kubernetes is stopping the pod.
 
+### Web pages
+
+The server renders its web pages itself (`unpub/lib/src/web/`), in Plentific's look: the Plentific logo, and the colours and Figtree font of the Plentific dashboard's design tokens, light and dark. The pages run no JavaScript, so there is nothing to build: readmes and changelogs are sanitized, and their Content-Security-Policy lets a page load only its own styles, Figtree from Google Fonts and https images.
+
 ### Development
 
 - `dart test` in `unpub` runs every test. The ones tagged `mongodb` need MongoDB on localhost:27017 (`docker compose -f unpub_aws/docker-compose.yml up mongo`); `dart test --exclude-tags mongodb` leaves them out.
@@ -42,7 +46,7 @@ The server logs to standard output, which is the pod's log (ArgoCD shows it too)
 
 ## Screenshots
 
-![Screenshot](https://raw.githubusercontent.com/bytedance/unpub/master/assets/screenshot.png)
+![A package page](https://raw.githubusercontent.com/plentific/unpub/master/assets/screenshot.png)
 
 ## Usage
 
@@ -170,7 +174,6 @@ var app = unpub.App(
 
 ## Credits
 
-- [pub-dev](https://github.com/dart-lang/pub-dev): Web page styles are mostly imported from https://pub.dev directly.
 - [shields](https://shields.io): Badges generation.
 
 ## License
