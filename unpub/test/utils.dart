@@ -47,13 +47,13 @@ Future<ProcessResult> pubPublish(String name, String version) {
   );
 }
 
-Future<ProcessResult> pubUploader(String name, String operation, String email) {
+/// Adds or removes an uploader through the API, as `dart pub uploader` did
+/// before pub stopped managing uploaders from the command line.
+Future<http.Response> changeUploader(String name, String operation, String email) {
   assert(['add', 'remove'].contains(operation), 'operation error');
-
-  return Process.run(
-    'dart',
-    ['pub', 'uploader', operation, email],
-    workingDirectory: path.absolute('test/fixtures', name, '0.0.1'),
-    environment: {'PUB_HOSTED_URL': pubHostedUrl},
-  );
+  final package = Uri.encodeComponent(name);
+  if (operation == 'add') {
+    return http.post(baseUri.resolve('/api/packages/$package/uploaders'), body: {'email': email});
+  }
+  return http.delete(baseUri.resolve('/api/packages/$package/uploaders/${Uri.encodeComponent(email)}'));
 }
