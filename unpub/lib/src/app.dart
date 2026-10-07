@@ -347,14 +347,21 @@ class App {
   @Route.post('/api/packages/<name>/uploaders')
   Future<shelf.Response> addUploader(shelf.Request req, String name) async {
     var body = await req.readAsString();
-    var email = Uri.splitQueryString(body)['email']!; // TODO: null
+    var email = Uri.splitQueryString(body)['email'];
+    if (email == null) {
+      return _badRequest('missing email');
+    }
     var operatorEmail = await _getUploaderEmail(req);
     var package = await metaStore.queryPackage(name);
+    if (package == null) {
+      return _badRequest('package not exists', status: HttpStatus.notFound);
+    }
 
-    if (package?.uploaders?.contains(operatorEmail) == false) {
+    var uploaders = _uploadersOf(package);
+    if (!uploaders.contains(operatorEmail)) {
       return _badRequest('no permission', status: HttpStatus.forbidden);
     }
-    if (package?.uploaders?.contains(email) == true) {
+    if (uploaders.contains(email)) {
       return _badRequest('email already exists');
     }
 
@@ -367,18 +374,27 @@ class App {
     email = Uri.decodeComponent(email);
     var operatorEmail = await _getUploaderEmail(req);
     var package = await metaStore.queryPackage(name);
+    if (package == null) {
+      return _badRequest('package not exists', status: HttpStatus.notFound);
+    }
 
-    // TODO: null
-    if (package?.uploaders?.contains(operatorEmail) == false) {
+    var uploaders = _uploadersOf(package);
+    if (!uploaders.contains(operatorEmail)) {
       return _badRequest('no permission', status: HttpStatus.forbidden);
     }
-    if (package?.uploaders?.contains(email) == false) {
+    if (!uploaders.contains(email)) {
       return _badRequest('email not uploader');
     }
 
     await metaStore.removeUploader(name, email);
     return _successMessage('uploader removed');
   }
+
+  /// A package without an uploaders list has no uploaders.
+  List<String> _uploadersOf(UnpubPackage package) => switch (package.uploaders) {
+        null => const [],
+        final uploaders => uploaders,
+      };
 
   @Route.get('/webapi/packages')
   Future<shelf.Response> getPackages(shelf.Request req) async {

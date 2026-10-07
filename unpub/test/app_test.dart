@@ -92,4 +92,42 @@ main() {
     expect(await download.read().expand((chunk) => chunk).toList(), archive);
     expect(metaStore.downloads, ['unpub_fixture 1.2.3']);
   });
+
+  test('changes no uploaders of a package that does not exist', () async {
+    final app = unpub.App(
+      metaStore: _MemoryMetaStore(),
+      packageStore: unpub.FileStore(Directory.systemTemp.path),
+      overrideUploaderEmail: 'publisher@example.com',
+    );
+
+    final added = await app.router.call(shelf.Request(
+      'POST',
+      Uri.parse('http://localhost/api/packages/missing/uploaders'),
+      headers: {'content-type': 'application/x-www-form-urlencoded'},
+      body: 'email=someone%40example.com',
+    ));
+    final removed = await app.router.call(
+      shelf.Request('DELETE', Uri.parse('http://localhost/api/packages/missing/uploaders/someone%40example.com')),
+    );
+
+    expect(added.statusCode, HttpStatus.notFound);
+    expect(removed.statusCode, HttpStatus.notFound);
+  });
+
+  test('asks for the email of the uploader to add', () async {
+    final app = unpub.App(
+      metaStore: _MemoryMetaStore(),
+      packageStore: unpub.FileStore(Directory.systemTemp.path),
+      overrideUploaderEmail: 'publisher@example.com',
+    );
+
+    final added = await app.router.call(shelf.Request(
+      'POST',
+      Uri.parse('http://localhost/api/packages/unpub_fixture/uploaders'),
+      headers: {'content-type': 'application/x-www-form-urlencoded'},
+      body: '',
+    ));
+
+    expect(added.statusCode, HttpStatus.badRequest);
+  });
 }
