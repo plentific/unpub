@@ -214,6 +214,35 @@ main() {
     expect(metaStore.packages, isEmpty);
   });
 
+  test('shows the package page for authors with and without an email', () async {
+    final metaStore = _MemoryMetaStore();
+    await metaStore.addVersion(
+      'unpub_fixture',
+      unpub.UnpubVersion(
+        '1.0.0',
+        {
+          'name': 'unpub_fixture',
+          'version': '1.0.0',
+          'authors': ['Jane Doe', 'John Roe <john@example.com>'],
+        },
+        null,
+        'publisher@example.com',
+        null,
+        null,
+        DateTime.utc(2026, 10, 7),
+      ),
+    );
+    final app = unpub.App(metaStore: metaStore, packageStore: unpub.FileStore(Directory.systemTemp.path));
+
+    final response = await app.router.call(
+      shelf.Request('GET', Uri.parse('http://localhost/webapi/package/unpub_fixture/latest')),
+    );
+
+    expect(response.statusCode, HttpStatus.ok);
+    final data = (jsonDecode(await response.readAsString()) as Map<String, dynamic>)['data'];
+    expect(data['authors'], ['Jane Doe', 'john@example.com']);
+  });
+
   test('answers 404 for a package it does not have, instead of sending the client elsewhere', () async {
     final app = unpub.App(metaStore: _MemoryMetaStore(), packageStore: unpub.FileStore(Directory.systemTemp.path));
 

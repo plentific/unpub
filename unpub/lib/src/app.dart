@@ -109,6 +109,16 @@ class App {
     return bytes.takeBytes();
   }
 
+  /// The emails in an author entry ("Name <email>"), or the entry itself
+  /// when it has none.
+  List<String> _authorContacts(String author) {
+    final emails = [
+      for (final match in RegExp(r'<(.*?)>').allMatches(author))
+        if (match.group(1) case final String email) email,
+    ];
+    return emails.isEmpty ? [author] : emails;
+  }
+
   bool _isSemanticVersion(String version) {
     try {
       semver.Version.parse(version);
@@ -518,14 +528,12 @@ class App {
     });
 
     var pubspec = packageVersion.pubspec;
-    List<String?> authors;
-    if (pubspec['author'] != null) {
-      authors = RegExp(r'<(.*?)>').allMatches(pubspec['author']).map((match) => match.group(1)).toList();
-    } else if (pubspec['authors'] != null) {
-      authors = (pubspec['authors'] as List).map((author) => RegExp(r'<(.*?)>').firstMatch(author)!.group(1)).toList();
-    } else {
-      authors = [];
-    }
+    // `author` and `authors` are deprecated, but older pubspecs have them.
+    var authors = switch ((pubspec['author'], pubspec['authors'])) {
+      (final String author, _) => _authorContacts(author),
+      (_, final List authors) => [for (final author in authors) ..._authorContacts('$author')],
+      _ => <String>[],
+    };
 
     var depMap = (pubspec['dependencies'] as Map? ?? {}).cast<String, String>();
 
