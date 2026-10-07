@@ -46,26 +46,15 @@ final class DbConnection implements MongoConnection {
   bool get isConnected => _db.isConnected;
 
   @override
-  Future<void> open() async {
-    try {
-      await switch (_transport) {
-        PlainTransport() => _db.open(secure: false),
-        TlsTransport(:final caFile, :final certificateKeyFile, :final certificateKeyFilePassword) => _db.open(
-          secure: true,
-          tlsCAFile: caFile,
-          tlsCertificateKeyFile: certificateKeyFile,
-          tlsCertificateKeyFilePassword: certificateKeyFilePassword,
-        ),
-      };
-    } on TypeError catch (e) {
-      // mongo_dart reads the server's hello reply with casts, so a reply
-      // without a field it expects fails as a bare type error.
-      throw StateError(
-        "Could not read the database server's hello reply ($e). mongo_dart needs logicalSessionTimeoutMinutes in "
-        'it, which a server without session support leaves out: Amazon DocumentDB 3.6 does, 4.0 and later send it.',
-      );
-    }
-  }
+  Future<void> open() => switch (_transport) {
+    PlainTransport() => _db.open(secure: false),
+    TlsTransport(:final caFile, :final certificateKeyFile, :final certificateKeyFilePassword) => _db.open(
+      secure: true,
+      tlsCAFile: caFile,
+      tlsCertificateKeyFile: certificateKeyFile,
+      tlsCertificateKeyFilePassword: certificateKeyFilePassword,
+    ),
+  };
 
   @override
   Future<void> close() => _db.close();
