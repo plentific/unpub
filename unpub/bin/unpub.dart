@@ -12,40 +12,40 @@ import 'package:unpub_aws/core/web_identity_token.dart';
 import 'package:unpub_aws/package_store/s3_sts_file_store.dart';
 
 main(List<String> arguments) async {
-  final environment = Platform.environment;
-  ArgResults args = _parseArgs(arguments, environment);
+  final args = _parseArgs(arguments, Platform.environment);
   final host = args['host'] as String;
   final port = int.parse(args['port'] as String);
-  final dbUri = args['database'] as String;
   final proxyOrigin = args['proxy-origin'] as String;
-  final roleArn = args['roleArn'] as String?;
-  final roleSessionName = args['roleSessionName'] as String?;
-  final webIdentityToken = args['webIdentityToken'] as String?;
-  final webIdentityTokenFile = args['webIdentityTokenFile'] as String?;
-  final bucketName = args['bucketName'] as String?;
-  final region = args['region'] as String?;
-  final tlsCAFile = args['tlsCAFile'] as String?;
-  final tlsCertificateKeyFile = args['tlsCertificateKeyFile'] as String?;
-  final tlsCertificateKeyFilePassword = args['tlsCertificateKeyFilePassword'] as String?;
 
-  final mongoDbStore = await _createAndInitMongoDbStore(
-    dbUri,
-    tlsCAFile: tlsCAFile,
-    tlsCertificateKeyFile: tlsCertificateKeyFile,
-    tlsCertificateKeyFilePassword: tlsCertificateKeyFilePassword,
+  // Every option is checked before anything is connected, so a missing one is
+  // reported at once instead of after connecting to the database and to STS.
+  final databaseUri = _databaseUri(args['database'] as String);
+  final transport = _transport(
+    caFile: args['tlsCAFile'] as String?,
+    certificateKeyFile: args['tlsCertificateKeyFile'] as String?,
+    certificateKeyFilePassword: args['tlsCertificateKeyFilePassword'] as String?,
   );
-  final awsStore = await _createAndInitS3Store(
-    roleArn: roleArn,
-    roleSessionName: roleSessionName,
-    webIdentityToken: webIdentityToken,
-    webIdentityTokenFile: webIdentityTokenFile,
-    region: region,
-    bucketName: bucketName,
+  final webIdentity = _webIdentity(
+    roleArn: args['roleArn'] as String?,
+    roleSessionName: args['roleSessionName'] as String?,
+    webIdentityToken: args['webIdentityToken'] as String?,
+    webIdentityTokenFile: args['webIdentityTokenFile'] as String?,
   );
+  final region = switch (args['region'] as String?) {
+    null || '' => 'eu-west-1',
+    final region => region,
+  };
+  final bucket = switch (args['bucketName'] as String?) {
+    null || '' => throw ArgumentError('Pass --bucketName or set AWS_BUCKET_NAME to the bucket for package archives.'),
+    final bucket => bucket,
+  };
+
+  final metaStore = await _connectMetaStore(databaseUri, transport);
+  final packageStore = await _connectPackageStore(webIdentity, region: region, bucket: bucket);
 
   final app = unpub.App(
-    metaStore: mongoDbStore,
-    packageStore: awsStore,
+    metaStore: metaStore,
+    packageStore: packageStore,
     proxy_origin: proxyOrigin.trim().isEmpty ? null : Uri.parse(proxyOrigin),
   );
   final server = await app.serve(host, port);
@@ -59,35 +59,59 @@ main(List<String> arguments) async {
   exit(0);
 }
 
-Future<unpub.MetaStore> _createAndInitMongoDbStore(
-  String dbUri, {
-  String? tlsCAFile,
-  String? tlsCertificateKeyFile,
-  String? tlsCertificateKeyFilePassword,
-}) async {
-  String modifiedUri = dbUri;
-  final uri = Uri.parse(dbUri);
-  if (!uri.queryParameters.containsKey('authMechanism')) {
-    final queryParams = Map<String, String>.from(uri.queryParameters);
-    queryParams['authMechanism'] = 'SCRAM-SHA-1';
-    modifiedUri = uri.replace(queryParameters: queryParams).toString();
-  }
-  final db = Db(modifiedUri);
+/// Amazon DocumentDB only authenticates with SCRAM-SHA-1, so that is the
+/// mechanism unless the URI names one.
+String _databaseUri(String uri) {
+  final parsed = Uri.parse(uri);
+  if (parsed.queryParameters.containsKey('authMechanism')) return uri;
+  return parsed.replace(queryParameters: {...parsed.queryParameters, 'authMechanism': 'SCRAM-SHA-1'}).toString();
+}
 
-  final transport = switch (tlsCAFile) {
-    null || '' => const unpub.PlainTransport(),
-    final caFile => unpub.TlsTransport(
-      caFile: caFile,
-      certificateKeyFile: switch (tlsCertificateKeyFile) {
-        null || '' => null,
-        final file => file,
-      },
-      certificateKeyFilePassword: switch (tlsCertificateKeyFilePassword) {
-        null || '' => null,
-        final password => password,
-      },
+unpub.MongoTransport _transport({
+  required String? caFile,
+  required String? certificateKeyFile,
+  required String? certificateKeyFilePassword,
+}) => switch (caFile) {
+  null || '' => const unpub.PlainTransport(),
+  final caFile => unpub.TlsTransport(
+    caFile: caFile,
+    certificateKeyFile: switch (certificateKeyFile) {
+      null || '' => null,
+      final file => file,
+    },
+    certificateKeyFilePassword: switch (certificateKeyFilePassword) {
+      null || '' => null,
+      final password => password,
+    },
+  ),
+};
+
+AwsWebIdentity _webIdentity({
+  required String? roleArn,
+  required String? roleSessionName,
+  required String? webIdentityToken,
+  required String? webIdentityTokenFile,
+}) => AwsWebIdentity(
+  roleArn: switch (roleArn) {
+    null || '' => throw ArgumentError('Pass --roleArn or set AWS_ROLE_ARN to the role to assume.'),
+    final roleArn => roleArn,
+  },
+  roleSessionName: switch (roleSessionName) {
+    null || '' => throw ArgumentError('--roleSessionName cannot be empty.'),
+    final roleSessionName => roleSessionName,
+  },
+  token: switch ((webIdentityToken, webIdentityTokenFile)) {
+    (final String token, _) when token.isNotEmpty => InlineWebIdentityToken(token),
+    (_, final String path) when path.isNotEmpty => FileWebIdentityToken(File(path)),
+    _ => throw ArgumentError(
+      'Pass --webIdentityTokenFile or --webIdentityToken, or set '
+      'AWS_WEB_IDENTITY_TOKEN_FILE or AWS_WEB_IDENTITY_TOKEN.',
     ),
-  };
+  },
+);
+
+Future<unpub.MetaStore> _connectMetaStore(String uri, unpub.MongoTransport transport) async {
+  final db = Db(uri);
   print(switch (transport) {
     unpub.PlainTransport() => 'Connecting to database using not secure connection',
     unpub.TlsTransport(:final caFile) => 'Connecting to database using CA file from path: $caFile',
@@ -104,6 +128,30 @@ Future<unpub.MetaStore> _createAndInitMongoDbStore(
   }
 
   return unpub.ReconnectingMetaStore(store: mongoStore, connection: connection);
+}
+
+Future<S3StoreIamStore> _connectPackageStore(
+  AwsWebIdentity webIdentity, {
+  required String region,
+  required String bucket,
+}) async {
+  final source = StsWebIdentityCredentialsSource.inRegion(region: region, webIdentity: webIdentity);
+  switch (await source.fetch()) {
+    case CredentialsRefused(:final reason):
+      throw StateError('Could not get AWS credentials from STS: $reason');
+    case CredentialsFetched(:final credentials):
+      final refreshingCredentials = RefreshingCredentials(
+        source: source,
+        current: credentials,
+        refreshMargin: const Duration(minutes: 5),
+        retryDelay: const Duration(seconds: 30),
+      );
+      refreshingCredentials.keepFresh();
+      return S3StoreIamStore(
+        s3: AwsS3Worker.inRegion(region: region, bucket: bucket),
+        credentials: refreshingCredentials,
+      );
+  }
 }
 
 ArgResults _parseArgs(List<String> args, Map<String, dynamic> environment) {
@@ -129,58 +177,4 @@ ArgResults _parseArgs(List<String> args, Map<String, dynamic> environment) {
     exit(1);
   }
   return arguments;
-}
-
-Future<S3StoreIamStore> _createAndInitS3Store({
-  required String? roleArn,
-  required String? roleSessionName,
-  required String? webIdentityToken,
-  required String? webIdentityTokenFile,
-  required String? region,
-  required String? bucketName,
-}) async {
-  final awsWebIdentity = AwsWebIdentity(
-    roleArn: switch (roleArn) {
-      null || '' => throw ArgumentError('Pass --roleArn or set AWS_ROLE_ARN to the role to assume.'),
-      final roleArn => roleArn,
-    },
-    roleSessionName: switch (roleSessionName) {
-      null || '' => throw ArgumentError('--roleSessionName cannot be empty.'),
-      final roleSessionName => roleSessionName,
-    },
-    token: switch ((webIdentityToken, webIdentityTokenFile)) {
-      (final String token, _) when token.isNotEmpty => InlineWebIdentityToken(token),
-      (_, final String path) when path.isNotEmpty => FileWebIdentityToken(File(path)),
-      _ => throw ArgumentError(
-        'Pass --webIdentityTokenFile or --webIdentityToken, or set '
-        'AWS_WEB_IDENTITY_TOKEN_FILE or AWS_WEB_IDENTITY_TOKEN.',
-      ),
-    },
-  );
-  final awsRegion = switch (region) {
-    null || '' => 'eu-west-1',
-    final region => region,
-  };
-  final awsBucket = switch (bucketName) {
-    null || '' => throw ArgumentError('Pass --bucketName or set AWS_BUCKET_NAME to the bucket for package archives.'),
-    final bucketName => bucketName,
-  };
-
-  final source = StsWebIdentityCredentialsSource.inRegion(region: awsRegion, webIdentity: awsWebIdentity);
-  switch (await source.fetch()) {
-    case CredentialsRefused(:final reason):
-      throw StateError('Could not get AWS credentials from STS: $reason');
-    case CredentialsFetched(:final credentials):
-      final refreshingCredentials = RefreshingCredentials(
-        source: source,
-        current: credentials,
-        refreshMargin: const Duration(minutes: 5),
-        retryDelay: const Duration(seconds: 30),
-      );
-      refreshingCredentials.keepFresh();
-      return S3StoreIamStore(
-        s3: AwsS3Worker.inRegion(region: awsRegion, bucket: awsBucket),
-        credentials: refreshingCredentials,
-      );
-  }
 }
