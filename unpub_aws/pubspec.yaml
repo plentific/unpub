@@ -10,11 +10,8 @@ dependencies:
   unpub:
   aws_signature_v4:
   aws_common:
-  aws_sts_api:
-    git:
-      url: https://github.com/plentific/aws_client.git
-      path: generated/aws_sts_api
-      ref: 99afe19f42fc28bef4489d01d1d9d3276899f64a
+  http: ^0.13.6
+  xml: ^6.3.0
 
 dev_dependencies:
   lints: ^1.0.0

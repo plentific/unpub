@@ -65,15 +65,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.3.1+7"
-  aws_sts_api:
-    dependency: transitive
-    description:
-      path: "generated/aws_sts_api"
-      ref: "99afe19f42fc28bef4489d01d1d9d3276899f64a"
-      resolved-ref: "99afe19f42fc28bef4489d01d1d9d3276899f64a"
-      url: "https://github.com/plentific/aws_client.git"
-    source: git
-    version: "2.0.0"
   basic_utils:
     dependency: transitive
     description:
@@ -547,14 +538,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.3"
-  shared_aws_api:
-    dependency: transitive
-    description:
-      name: shared_aws_api
-      sha256: "18d476d05effcbcc6a33aeec3e71b9c6d642f035055a06efbd14ac5f21d0a1e8"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.0.0"
   shelf:
     dependency: "direct main"
     description:
