@@ -77,6 +77,18 @@ class App {
 
   http.Client? _googleapisClient;
 
+  /// A valid Dart package name: lowercase letters, digits and underscores.
+  final _packageName = RegExp(r'^[a-z_][a-z0-9_]*$');
+
+  bool _isSemanticVersion(String version) {
+    try {
+      semver.Version.parse(version);
+      return true;
+    } on FormatException {
+      return false;
+    }
+  }
+
   shelf.Response _missing(String path) => switch (missingPackages) {
     RejectMissingPackages() => shelf.Response.notFound('Not Found'),
     RedirectMissingPackages(:final upstream) => shelf.Response.found(upstream.resolve(path).toString()),
@@ -270,13 +282,20 @@ class App {
       var pubspecYaml = utf8.decode(pubspecArchiveFile.content);
       var pubspec = loadYamlAsMap(pubspecYaml)!;
 
+      // Both end up in storage keys and URLs, and every version is parsed when
+      // a package is listed, so one bad value would break the whole package.
+      var name = pubspec['name'];
+      if (name is! String || !_packageName.hasMatch(name)) {
+        throw 'invalid package name: $name';
+      }
+      var version = pubspec['version'];
+      if (version is! String || !_isSemanticVersion(version)) {
+        throw 'version invalid: $version is not a semantic version';
+      }
+
       if (uploadValidator != null) {
         await uploadValidator!(pubspec, uploader);
       }
-
-      // TODO: null
-      var name = pubspec['name'] as String;
-      var version = pubspec['version'] as String;
 
       var package = await metaStore.queryPackage(name);
 
