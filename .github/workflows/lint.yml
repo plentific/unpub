@@ -5,8 +5,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: google/dart:latest
+      image: dart:3.12.2
     steps:
-      - uses: actions/checkout@v2
-      - run: cd unpub && dart pub get && dart analyze
-      - run: dart format --set-exit-if-changed **/*.dart
+      - uses: actions/checkout@v4
+      - run: cd unpub && dart pub get --enforce-lockfile && dart analyze
+      - run: dart format --set-exit-if-changed unpub unpub_aws
