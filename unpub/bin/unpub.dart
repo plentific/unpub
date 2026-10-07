@@ -100,7 +100,7 @@ ArgResults _parseArgs(List<String> args, Map<String, dynamic> environment) {
   parser.addOption('host', abbr: 'h', defaultsTo: '0.0.0.0');
   parser.addOption('port', abbr: 'p', defaultsTo: '4000');
   parser.addOption('database', abbr: 'd', defaultsTo: 'mongodb://localhost:27017/dart_pub');
-  parser.addOption('proxy-origin', abbr: 'o', defaultsTo: 'false');
+  parser.addOption('proxy-origin', abbr: 'o', defaultsTo: '');
   parser.addOption('exitOnDbError', abbr: 'e', defaultsTo: 'false');
   parser.addOption('roleArn', defaultsTo: environment['AWS_ROLE_ARN']);
   parser.addOption('roleSessionName', defaultsTo: 'unpubConnection');
