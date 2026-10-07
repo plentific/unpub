@@ -7,3 +7,6 @@
 
 # pubspec.lock
 */pubspec.lock
+# IDE metadata
+.idea/
+*.iml
