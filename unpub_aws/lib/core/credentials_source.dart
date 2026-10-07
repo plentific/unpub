@@ -1,6 +1,7 @@
 import 'package:aws_sts_api/sts-2011-06-15.dart';
 import 'package:unpub_aws/core/aws_credentials.dart';
 import 'package:unpub_aws/core/aws_web_identity.dart';
+import 'package:unpub_aws/core/web_identity_token.dart';
 
 /// What a [CredentialsSource] answered.
 sealed class CredentialsReply {
@@ -43,7 +44,10 @@ final class StsWebIdentityCredentialsSource implements CredentialsSource {
       final response = await _sts.assumeRoleWithWebIdentity(
         roleArn: _webIdentity.roleArn,
         roleSessionName: _webIdentity.roleSessionName,
-        webIdentityToken: _webIdentity.webIdentityToken,
+        webIdentityToken: switch (_webIdentity.token) {
+          InlineWebIdentityToken(:final token) => token,
+          FileWebIdentityToken(:final file) => await file.readAsString(),
+        },
       );
       final credentials = response.credentials;
       if (credentials == null) return const CredentialsRefused('STS answered without credentials');

@@ -8,6 +8,7 @@ import 'package:unpub_aws/core/aws_s3_worker.dart';
 import 'package:unpub_aws/core/aws_web_identity.dart';
 import 'package:unpub_aws/core/credentials_source.dart';
 import 'package:unpub_aws/core/refreshing_credentials.dart';
+import 'package:unpub_aws/core/web_identity_token.dart';
 import 'package:unpub_aws/package_store/s3_sts_file_store.dart';
 
 main(List<String> arguments) async {
@@ -40,7 +41,6 @@ main(List<String> arguments) async {
     roleSessionName: roleSessionName,
     webIdentityToken: webIdentityToken,
     webIdentityTokenFile: webIdentityTokenFile,
-    environment: environment,
     region: region,
     bucketName: bucketName,
   );
@@ -129,33 +129,25 @@ Future<S3StoreIamStore> _createAndInitS3Store({
   required String? roleSessionName,
   required String? webIdentityToken,
   required String? webIdentityTokenFile,
-  required Map<String, String> environment,
   required String? region,
   required String? bucketName,
 }) async {
-  final AwsWebIdentity awsWebIdentity;
-  if (roleArn?.isNotEmpty == true &&
-      roleSessionName?.isNotEmpty == true &&
-      webIdentityToken?.isNotEmpty == true) {
-    awsWebIdentity = AwsWebIdentity(
-      roleArn: roleArn!,
-      roleSessionName: roleSessionName!,
-      webIdentityToken: webIdentityToken!,
-    );
-  } else if (webIdentityTokenFile?.isNotEmpty == true) {
-    awsWebIdentity = await AwsWebIdentity.fromEnvFile(
-      env: environment,
-      path: webIdentityTokenFile,
-      roleSessionName: roleSessionName,
-      roleArn: roleArn,
-    );
-  } else {
-    awsWebIdentity = AwsWebIdentity.fromEnv(environment);
-  }
-
-  if (awsWebIdentity.roleArn.isEmpty || awsWebIdentity.roleSessionName.isEmpty) {
-    throw ArgumentError('All STS credentials must be passed on AWS.');
-  }
+  final awsWebIdentity = AwsWebIdentity(
+    roleArn: switch (roleArn) {
+      null || '' => throw ArgumentError('Pass --roleArn or set AWS_ROLE_ARN to the role to assume.'),
+      final roleArn => roleArn,
+    },
+    roleSessionName: switch (roleSessionName) {
+      null || '' => throw ArgumentError('--roleSessionName cannot be empty.'),
+      final roleSessionName => roleSessionName,
+    },
+    token: switch ((webIdentityToken, webIdentityTokenFile)) {
+      (final String token, _) when token.isNotEmpty => InlineWebIdentityToken(token),
+      (_, final String path) when path.isNotEmpty => FileWebIdentityToken(File(path)),
+      _ => throw ArgumentError('Pass --webIdentityTokenFile or --webIdentityToken, or set '
+          'AWS_WEB_IDENTITY_TOKEN_FILE or AWS_WEB_IDENTITY_TOKEN.'),
+    },
+  );
   final awsRegion = switch (region) {
     null || '' => 'eu-west-1',
     final region => region,
