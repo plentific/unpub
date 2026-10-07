@@ -21,10 +21,7 @@ dependencies:
   yaml: ^3.1.4
   pub_semver: ^2.2.1
   json_annotation: ^4.12.0
-  mongo_dart:
-    git:
-      url: https://github.com/plentific/mongo_dart.git
-      ref: c18deaabd7132e71b2d9524b0307449d71ca3c3e
+  mongo_dart: ^0.10.9
   mime: ^2.1.0
   intl: ^0.20.3
   path: ^1.9.1
@@ -39,9 +36,3 @@ dev_dependencies:
   json_serializable: ^6.14.1
   shelf_router_generator: ^1.1.5
   chunked_stream: ^1.4.2
-
-dependency_overrides:
-  # The mongo_dart fork still asks for uuid ^3.0.0, which holds aws_common and
-  # aws_signature_v4 back. Its only use is Uuid().v4() in GridFS, unchanged in
-  # uuid 4 and unused by unpub. Drop this once the fork allows uuid 4.
-  uuid: ^4.5.1
