@@ -17,12 +17,6 @@
             "cwd": "unpub_aws",
             "request": "launch",
             "type": "dart"
-        },
-        {
-            "name": "unpub_web",
-            "cwd": "unpub_web",
-            "request": "launch",
-            "type": "dart"
         }
     ]
 }
