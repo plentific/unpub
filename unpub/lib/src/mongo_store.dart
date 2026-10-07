@@ -99,7 +99,7 @@ class MongoStore extends MetaStore {
       SelectorBuilder baseSelector = where;
 
       if (keyword != null) {
-        baseSelector = baseSelector.match('name', '.*$keyword.*');
+        baseSelector = baseSelector.match('name', '.*${RegExp.escape(keyword)}.*');
       }
       if (uploader != null) {
         baseSelector = baseSelector.eq('uploaders', uploader);
