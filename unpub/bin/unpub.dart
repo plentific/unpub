@@ -54,7 +54,7 @@ main(List<String> arguments) async {
   print('Serving at http://${server.address.host}:${server.port}');
 }
 
-Future<MongoStore> _createAndInitMongoDbStore(
+Future<unpub.MetaStore> _createAndInitMongoDbStore(
   String dbUri,
   bool exitOnDbError, {
   String? tlsCAFile,
@@ -68,34 +68,41 @@ Future<MongoStore> _createAndInitMongoDbStore(
     queryParams['authMechanism'] = 'SCRAM-SHA-1';
     modifiedUri = uri.replace(queryParameters: queryParams).toString();
   }
+  final db = Db(modifiedUri);
 
-  final mongoDbStore = MongoStore(
-    Db(modifiedUri),
-    onDatabaseError: exitOnDbError
-        ? (error) {
-            print('Database error: $error Exiting...');
-            exit(1);
-          }
-        : null,
+  final transport = switch (tlsCAFile) {
+    null || '' => const unpub.PlainTransport(),
+    final caFile => unpub.TlsTransport(
+        caFile: caFile,
+        certificateKeyFile: switch (tlsCertificateKeyFile) {
+          null || '' => null,
+          final file => file,
+        },
+        certificateKeyFilePassword: switch (tlsCertificateKeyFilePassword) {
+          null || '' => null,
+          final password => password,
+        },
+      ),
+  };
+  print(switch (transport) {
+    unpub.PlainTransport() => 'Connecting to database using not secure connection',
+    unpub.TlsTransport(:final caFile) => 'Connecting to database using CA file from path: $caFile',
+  });
+  final connection = unpub.DbConnection(db: db, transport: transport);
+  await connection.open();
+
+  return unpub.ReconnectingMetaStore(
+    store: MongoStore(
+      db,
+      onDatabaseError: exitOnDbError
+          ? (error) {
+              print('Database error: $error Exiting...');
+              exit(1);
+            }
+          : null,
+    ),
+    connection: connection,
   );
-
-  if (tlsCAFile?.isNotEmpty == true) {
-    print('Connecting to database using CA file from path: $tlsCAFile');
-    await mongoDbStore.db.open(
-      secure: true,
-      tlsCAFile: tlsCAFile,
-      tlsCertificateKeyFile: tlsCertificateKeyFile?.isNotEmpty == true ? tlsCertificateKeyFile : null,
-      tlsCertificateKeyFilePassword:
-          tlsCertificateKeyFilePassword?.isNotEmpty == true ? tlsCertificateKeyFilePassword : null,
-    );
-  } else {
-    print('Connecting to database using not secure connection');
-    await mongoDbStore.db.open(
-      secure: false,
-    );
-  }
-
-  return mongoDbStore;
 }
 
 ArgResults _parseArgs(List<String> args, Map<String, dynamic> environment) {
