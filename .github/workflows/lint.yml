@@ -4,11 +4,19 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: dart:3.12.2
+    services:
+      # For the integration tests (tagged mongodb); production runs on a
+      # MongoDB 5 compatible Amazon DocumentDB.
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
     steps:
       - uses: actions/checkout@v4
-      - run: cd unpub && dart pub get --enforce-lockfile && dart analyze && dart test --exclude-tags mongodb
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.12.2
+      - run: cd unpub && dart pub get --enforce-lockfile && dart analyze && dart test --concurrency 1
       - run: cd unpub_aws && dart pub get && dart analyze && dart test
       # Generated files keep their generators' format.
       - run: find unpub unpub_aws -name '*.dart' ! -name '*.g.dart' ! -path '*/.dart_tool/*' -print0 | xargs -0 dart format --set-exit-if-changed
