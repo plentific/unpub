@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -48,6 +49,12 @@ class AwsS3Worker {
     );
     final signedRequest = await _signRequest(credentials: credentials, request: request);
     final response = await signedRequest.send().response;
+    // Without this check an S3 error (e.g. 403 for expired credentials) is
+    // served to `dart pub` as the package archive.
+    if (response.statusCode != HttpStatus.ok) {
+      throw Exception('S3 file download error. Status code ${response.statusCode}. \n'
+          '${utf8.decode(await response.bodyBytes, allowMalformed: true)}');
+    }
     yield* response.body;
   }
 
