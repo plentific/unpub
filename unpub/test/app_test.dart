@@ -98,6 +98,33 @@ main() {
     expect(metaStore.downloads, ['unpub_fixture 1.2.3']);
   });
 
+  test('answers 404 for a package it does not have, instead of sending the client elsewhere', () async {
+    final app = unpub.App(metaStore: _MemoryMetaStore(), packageStore: unpub.FileStore(Directory.systemTemp.path));
+
+    for (final path in [
+      '/api/packages/http',
+      '/api/packages/http/versions/1.6.0',
+      '/packages/http/versions/1.6.0.tar.gz',
+    ]) {
+      final response = await app.router.call(shelf.Request('GET', Uri.parse('http://localhost$path')));
+
+      expect(response.statusCode, HttpStatus.notFound, reason: path);
+    }
+  });
+
+  test('redirects a package it does not have to the upstream server when asked to', () async {
+    final app = unpub.App(
+      metaStore: _MemoryMetaStore(),
+      packageStore: unpub.FileStore(Directory.systemTemp.path),
+      missingPackages: unpub.RedirectMissingPackages(Uri.parse('https://pub.dev')),
+    );
+
+    final response = await app.router.call(shelf.Request('GET', Uri.parse('http://localhost/api/packages/http')));
+
+    expect(response.statusCode, HttpStatus.found);
+    expect(response.headers['location'], 'https://pub.dev/api/packages/http');
+  });
+
   test('changes no uploaders of a package that does not exist', () async {
     final app = unpub.App(
       metaStore: _MemoryMetaStore(),

@@ -181,13 +181,9 @@ main() {
       );
     });
 
-    test('existing at remote', () async {
-      var name = 'http';
-      var res = await getVersions(name);
-      expect(res.statusCode, HttpStatus.ok);
-
-      var body = json.decode(res.body);
-      expect(body['name'], name);
+    test('only on pub.dev', () async {
+      var res = await getVersions('http');
+      expect(res.statusCode, HttpStatus.notFound);
     });
 
     test('not existing', () async {
@@ -243,12 +239,9 @@ main() {
       expect(res.statusCode, HttpStatus.notFound);
     });
 
-    test('existing at remote', () async {
+    test('only on pub.dev', () async {
       var res = await getSpecificVersion('http', '0.12.0+2');
-      expect(res.statusCode, HttpStatus.ok);
-
-      var body = json.decode(res.body);
-      expect(body['version'], '0.12.0+2');
+      expect(res.statusCode, HttpStatus.notFound);
     });
 
     test('not existing', () async {

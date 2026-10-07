@@ -16,6 +16,7 @@ import 'package:archive/archive.dart';
 import 'package:unpub/src/models.dart';
 import 'package:unpub/unpub_api/lib/models.dart';
 import 'package:unpub/src/meta_store.dart';
+import 'package:unpub/src/missing_packages.dart';
 import 'package:unpub/src/package_store.dart';
 import 'utils.dart';
 import 'static/index.html.dart' as index_html;
@@ -32,8 +33,8 @@ class App {
   /// package(tarball) store
   final PackageStore packageStore;
 
-  /// upstream url, default: https://pub.dev
-  final String upstream;
+  /// What to answer for packages this server does not have: 404 by default.
+  final MissingPackages missingPackages;
 
   /// http(s) proxy to call googleapis (to get uploader email)
   final String? googleapisProxy;
@@ -50,7 +51,7 @@ class App {
   App({
     required this.metaStore,
     required this.packageStore,
-    this.upstream = 'https://pub.dev',
+    this.missingPackages = const RejectMissingPackages(),
     this.googleapisProxy,
     this.overrideUploaderEmail,
     this.uploadValidator,
@@ -75,6 +76,11 @@ class App {
   );
 
   http.Client? _googleapisClient;
+
+  shelf.Response _missing(String path) => switch (missingPackages) {
+    RejectMissingPackages() => shelf.Response.notFound('Not Found'),
+    RedirectMissingPackages(:final upstream) => shelf.Response.found(upstream.resolve(path).toString()),
+  };
 
   String _resolveUrl(shelf.Request req, String reference) {
     if (proxy_origin != null) {
@@ -147,7 +153,7 @@ class App {
     var package = await metaStore.queryPackage(name);
 
     if (package == null) {
-      return shelf.Response.found(Uri.parse(upstream).resolve('/api/packages/$name').toString());
+      return _missing('/api/packages/$name');
     }
 
     package.versions.sort((a, b) {
@@ -174,7 +180,7 @@ class App {
 
     var package = await metaStore.queryPackage(name);
     if (package == null) {
-      return shelf.Response.found(Uri.parse(upstream).resolve('/api/packages/$name/versions/$version').toString());
+      return _missing('/api/packages/$name/versions/$version');
     }
 
     var packageVersion = package.versions.firstWhereOrNull((item) => item.version == version);
@@ -189,7 +195,7 @@ class App {
   Future<shelf.Response> download(shelf.Request req, String name, String version) async {
     var package = await metaStore.queryPackage(name);
     if (package == null) {
-      return shelf.Response.found(Uri.parse(upstream).resolve('/packages/$name/versions/$version.tar.gz').toString());
+      return _missing('/packages/$name/versions/$version.tar.gz');
     }
 
     if (isPubClient(req)) {
