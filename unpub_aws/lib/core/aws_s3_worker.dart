@@ -4,7 +4,7 @@ import 'dart:typed_data';
 
 import 'package:aws_common/aws_common.dart';
 import 'package:aws_signature_v4/aws_signature_v4.dart';
-import 'package:aws_sts_api/sts-2011-06-15.dart';
+import 'package:unpub_aws/core/aws_credentials.dart';
 
 class AwsS3Worker {
   AwsS3Worker({
@@ -19,7 +19,7 @@ class AwsS3Worker {
     required String name,
     required String version,
     required List<int> content,
-    required Credentials? credentials,
+    required AwsCredentials credentials,
   }) async* {
     try {
       final request = AWSStreamedHttpRequest.put(
@@ -42,7 +42,7 @@ class AwsS3Worker {
   Stream<List<int>> download({
     required String name,
     required String version,
-    required Credentials? credentials,
+    required AwsCredentials credentials,
   }) async* {
     final request = AWSStreamedHttpRequest.get(
       Uri.https('s3.$region.amazonaws.com', '/$bucket/${_getObjectKey(name, version)}'),
@@ -59,12 +59,9 @@ class AwsS3Worker {
   }
 
   Future<AWSSignedRequest> _signRequest({
-    required Credentials? credentials,
+    required AwsCredentials credentials,
     required AWSBaseHttpRequest request,
   }) async {
-    if (credentials == null) {
-      throw Exception('Empty AWS credentials');
-    }
     final signer = AWSSigV4Signer(
       credentialsProvider: AWSCredentialsProvider(
         AWSCredentials(

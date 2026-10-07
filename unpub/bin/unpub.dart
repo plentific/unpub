@@ -4,7 +4,10 @@ import 'package:args/args.dart';
 import 'package:mongo_dart/mongo_dart.dart';
 import 'package:unpub/src/mongo_store.dart';
 import 'package:unpub/unpub.dart' as unpub;
+import 'package:unpub_aws/core/aws_s3_worker.dart';
 import 'package:unpub_aws/core/aws_web_identity.dart';
+import 'package:unpub_aws/core/credentials_source.dart';
+import 'package:unpub_aws/core/refreshing_credentials.dart';
 import 'package:unpub_aws/package_store/s3_sts_file_store.dart';
 
 main(List<String> arguments) async {
@@ -130,7 +133,7 @@ Future<S3StoreIamStore> _createAndInitS3Store({
   required String? region,
   required String? bucketName,
 }) async {
-  late AwsWebIdentity awsWebIdentity;
+  final AwsWebIdentity awsWebIdentity;
   if (roleArn?.isNotEmpty == true &&
       roleSessionName?.isNotEmpty == true &&
       webIdentityToken?.isNotEmpty == true) {
@@ -150,12 +153,33 @@ Future<S3StoreIamStore> _createAndInitS3Store({
     awsWebIdentity = AwsWebIdentity.fromEnv(environment);
   }
 
-  final s3storeIamStore = S3StoreIamStore(
-    webIdentity: awsWebIdentity,
-    region: region,
-    bucketName: bucketName ?? 'testRegion',
-  );
-  await s3storeIamStore.init();
+  if (awsWebIdentity.roleArn.isEmpty || awsWebIdentity.roleSessionName.isEmpty) {
+    throw ArgumentError('All STS credentials must be passed on AWS.');
+  }
+  final awsRegion = switch (region) {
+    null || '' => 'eu-west-1',
+    final region => region,
+  };
+  final awsBucket = switch (bucketName) {
+    null || '' => throw ArgumentError('Pass --bucketName or set AWS_BUCKET_NAME to the bucket for package archives.'),
+    final bucketName => bucketName,
+  };
 
-  return s3storeIamStore;
+  final source = StsWebIdentityCredentialsSource.inRegion(region: awsRegion, webIdentity: awsWebIdentity);
+  switch (await source.fetch()) {
+    case CredentialsRefused(:final reason):
+      throw StateError('Could not get AWS credentials from STS: $reason');
+    case CredentialsFetched(:final credentials):
+      final refreshingCredentials = RefreshingCredentials(
+        source: source,
+        current: credentials,
+        refreshMargin: const Duration(minutes: 5),
+        retryDelay: const Duration(seconds: 30),
+      );
+      refreshingCredentials.keepFresh();
+      return S3StoreIamStore(
+        s3: AwsS3Worker(region: awsRegion, bucket: awsBucket),
+        credentials: refreshingCredentials,
+      );
+  }
 }

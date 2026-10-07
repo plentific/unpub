@@ -1,107 +1,30 @@
 import 'dart:async';
-import 'dart:io';
 
-import 'package:aws_sts_api/sts-2011-06-15.dart';
 import 'package:unpub/unpub.dart';
 import 'package:unpub_aws/core/aws_s3_worker.dart';
-import 'package:unpub_aws/core/aws_web_identity.dart';
+import 'package:unpub_aws/core/refreshing_credentials.dart';
 
-/// Use an AWS S3 Bucket using IAM as a package store
-class S3StoreIamStore extends PackageStore {
-  final AwsWebIdentity webIdentity;
-  String Function(String name, String version)? getObjectPath;
+/// Keeps package archives in S3, signing requests with credentials refreshed
+/// through STS (IAM roles for service accounts on EKS).
+final class S3StoreIamStore implements PackageStore {
+  final AwsS3Worker _s3;
+  final RefreshingCredentials _credentials;
 
-  final Map<String, String> _env;
-  late final String _bucketName;
-  late final String _region;
-  late final AwsS3Worker s3;
+  S3StoreIamStore({required this._s3, required this._credentials});
 
-  Credentials? _credentials;
+  @override
+  bool supportsDownloadUrl = false;
 
-  final _credentialsRefreshStreamController = StreamController<DateTime>();
-  StreamSubscription? _credentialsRefreshStreamSubscription;
-
-  S3StoreIamStore({
-    required this.webIdentity,
-    this.getObjectPath,
-    String? bucketName,
-    String? region,
-    Map<String, String>? environment,
-  }) : _env = environment ?? Platform.environment {
-    _region = region ?? _env['AWS_REGION'] ?? 'eu-west-1';
-    _bucketName = bucketName ?? _env['AWS_BUCKET_NAME'] ?? '';
-    s3 = AwsS3Worker(region: _region, bucket: _bucketName);
-
-    if (webIdentity.roleArn.isEmpty ||
-        webIdentity.webIdentityToken.isEmpty ||
-        webIdentity.roleSessionName.isEmpty) {
-      throw ArgumentError('All STS credentials must be passed on AWS.');
-    }
-    if (_bucketName.isEmpty == true) {
-      throw ArgumentError('AWS bucket name cannot be null.');
-    }
-    if (_region.isEmpty == true) {
-      throw ArgumentError('Could not determine a default region for AWS.');
-    }
-  }
-
-  Future<void> init() async {
-    _credentialsRefreshStreamSubscription = _credentialsRefreshStreamController.stream.listen(
-      (event) async {
-        final now = DateTime.now();
-        final timeDifferenceInSeconds = event.difference(now);
-        await Future.delayed(timeDifferenceInSeconds);
-        await _getAwsCredentialsFromStsAndInitClient();
-      },
-    );
-    await _getAwsCredentialsFromStsAndInitClient();
-  }
-
-  Future<void> close() async {
-    await _credentialsRefreshStreamSubscription?.cancel();
-  }
-
-  Future<void> _getAwsCredentialsFromStsAndInitClient() async {
-    var sts = STS(region: _region);
-
-    try {
-      final stsResponse = await sts.assumeRoleWithWebIdentity(
-        roleArn: webIdentity.roleArn,
-        roleSessionName: webIdentity.roleSessionName,
-        webIdentityToken: webIdentity.webIdentityToken,
-      );
-      final credentials = stsResponse.credentials;
-      if (credentials == null) {
-        throw Exception('Got empty AWS credentials. Cannot initialize AWS client.');
-      }
-      _credentials = Credentials(
-        accessKeyId: credentials.accessKeyId,
-        secretAccessKey: credentials.secretAccessKey,
-        sessionToken: credentials.sessionToken,
-        expiration: credentials.expiration,
-      );
-      _credentialsRefreshStreamController.add(credentials.expiration);
-    } catch (e) {
-      rethrow;
-    }
-  }
+  @override
+  FutureOr<String> downloadUrl(String name, String version) =>
+      throw UnsupportedError('S3StoreIamStore serves package archives through download');
 
   @override
   Future<void> upload(String name, String version, List<int> content) async {
-    await (s3
-        .upload(
-          name: name,
-          version: version,
-          content: content,
-          credentials: _credentials,
-        )
-        .first);
-    return;
+    await _s3.upload(name: name, version: version, content: content, credentials: _credentials.current).first;
   }
 
   @override
-  Stream<List<int>> download(String name, String version) async* {
-    final s3 = AwsS3Worker(region: _region, bucket: _bucketName);
-    yield* s3.download(name: name, version: version, credentials: _credentials);
-  }
+  Stream<List<int>> download(String name, String version) =>
+      _s3.download(name: name, version: version, credentials: _credentials.current);
 }
