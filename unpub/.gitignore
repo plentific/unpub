@@ -1,8 +1,10 @@
 # Files and directories created by pub
 .dart_tool/
 .packages
-# Remove the following pattern if you wish to check in your lock file
+# The server is an application: its own lock file is committed so image
+# builds are reproducible; lock files below it (test fixtures) are not.
 pubspec.lock
+!/pubspec.lock
 
 # Conventional directory for build outputs
 build/

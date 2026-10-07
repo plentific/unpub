@@ -9,8 +9,7 @@ class FileStore extends PackageStore {
   FileStore(this.baseDir, {this.getFilePath});
 
   File _getTarballFile(String name, String version) {
-    final filePath =
-        getFilePath?.call(name, version) ?? '$name-$version.tar.gz';
+    final filePath = getFilePath?.call(name, version) ?? '$name-$version.tar.gz';
     return File(path.join(baseDir, filePath));
   }
 

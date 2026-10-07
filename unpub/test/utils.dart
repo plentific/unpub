@@ -20,12 +20,9 @@ createServer(String opEmail) async {
   final db = Db('mongodb://localhost:27017/dart_pub_test');
   await db.open();
   var mongoStore = unpub.MongoStore(db);
+  await mongoStore.createIndexes();
 
-  var app = unpub.App(
-    metaStore: mongoStore,
-    packageStore: unpub.FileStore(baseDir),
-    overrideUploaderEmail: opEmail,
-  );
+  var app = unpub.App(metaStore: mongoStore, packageStore: unpub.FileStore(baseDir), overrideUploaderEmail: opEmail);
 
   var server = await app.serve('0.0.0.0', 4000);
   return server;
@@ -43,15 +40,21 @@ Future<http.Response> getSpecificVersion(String package, String version) {
 }
 
 Future<ProcessResult> pubPublish(String name, String version) {
-  return Process.run('dart', ['pub', 'publish', '--force'],
-      workingDirectory: path.absolute('test/fixtures', name, version),
-      environment: {'PUB_HOSTED_URL': pubHostedUrl});
+  return Process.run(
+    'dart',
+    ['pub', 'publish', '--force'],
+    workingDirectory: path.absolute('test/fixtures', name, version),
+    environment: {'PUB_HOSTED_URL': pubHostedUrl},
+  );
 }
 
-Future<ProcessResult> pubUploader(String name, String operation, String email) {
+/// Adds or removes an uploader through the API, as `dart pub uploader` did
+/// before pub stopped managing uploaders from the command line.
+Future<http.Response> changeUploader(String name, String operation, String email) {
   assert(['add', 'remove'].contains(operation), 'operation error');
-
-  return Process.run('dart', ['pub', 'uploader', operation, email],
-      workingDirectory: path.absolute('test/fixtures', name, '0.0.1'),
-      environment: {'PUB_HOSTED_URL': pubHostedUrl});
+  final package = Uri.encodeComponent(name);
+  if (operation == 'add') {
+    return http.post(baseUri.resolve('/api/packages/$package/uploaders'), body: {'email': email});
+  }
+  return http.delete(baseUri.resolve('/api/packages/$package/uploaders/${Uri.encodeComponent(email)}'));
 }
