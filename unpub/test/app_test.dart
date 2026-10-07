@@ -8,58 +8,7 @@ import 'package:shelf/shelf.dart' as shelf;
 import 'package:test/test.dart';
 import 'package:unpub/unpub.dart' as unpub;
 
-/// Keeps package metadata in memory instead of MongoDB.
-final class _MemoryMetaStore implements unpub.MetaStore {
-  final packages = <String, unpub.UnpubPackage>{};
-  final downloads = <String>[];
-
-  @override
-  Future<unpub.UnpubPackage?> queryPackage(String name) async => packages[name];
-
-  @override
-  Future<unpub.VersionDocs> queryVersionDocs(String name, String version) async {
-    for (final stored in [...?packages[name]?.versions]) {
-      if (stored.version == version) {
-        return unpub.VersionDocs(readme: stored.readme, changelog: stored.changelog);
-      }
-    }
-    return const unpub.VersionDocs(readme: null, changelog: null);
-  }
-
-  @override
-  Future<void> addVersion(String name, unpub.UnpubVersion version) async {
-    packages[name] = unpub.UnpubPackage(
-      name,
-      [...?packages[name]?.versions, version],
-      true,
-      [?version.uploader],
-      version.createdAt,
-      version.createdAt,
-      0,
-    );
-  }
-
-  @override
-  Future<void> addUploader(String name, String email) => throw UnimplementedError();
-
-  @override
-  Future<void> removeUploader(String name, String email) => throw UnimplementedError();
-
-  @override
-  void increaseDownloads(String name, String version) {
-    downloads.add('$name $version');
-  }
-
-  @override
-  Future<unpub.UnpubQueryResult> queryPackages({
-    required int size,
-    required int page,
-    required String sort,
-    String? keyword,
-    String? uploader,
-    String? dependency,
-  }) async => unpub.UnpubQueryResult(packages.length, packages.values.toList());
-}
+import 'memory_meta_store.dart';
 
 /// A package archive built in memory, with a pubspec and one data file.
 final class _PackageArchive {
@@ -94,7 +43,7 @@ main() {
   test('publishes a package archive and serves it back to dart pub', () async {
     final directory = await Directory.systemTemp.createTemp('unpub_app');
     addTearDown(() => directory.delete(recursive: true));
-    final metaStore = _MemoryMetaStore();
+    final metaStore = MemoryMetaStore();
     final app = unpub.App(
       metaStore: metaStore,
       packageStore: unpub.FileStore(directory.path),
@@ -137,7 +86,7 @@ main() {
   test('rejects an upload whose name is not a Dart package name', () async {
     final directory = await Directory.systemTemp.createTemp('unpub_app');
     addTearDown(() => directory.delete(recursive: true));
-    final metaStore = _MemoryMetaStore();
+    final metaStore = MemoryMetaStore();
     final publisher = _Publisher(
       unpub.App(
         metaStore: metaStore,
@@ -158,7 +107,7 @@ main() {
   test('rejects an upload whose version is not a semantic version', () async {
     final directory = await Directory.systemTemp.createTemp('unpub_app');
     addTearDown(() => directory.delete(recursive: true));
-    final metaStore = _MemoryMetaStore();
+    final metaStore = MemoryMetaStore();
     final publisher = _Publisher(
       unpub.App(
         metaStore: metaStore,
@@ -179,7 +128,7 @@ main() {
   test('rejects an archive larger than the upload limit', () async {
     final directory = await Directory.systemTemp.createTemp('unpub_app');
     addTearDown(() => directory.delete(recursive: true));
-    final metaStore = _MemoryMetaStore();
+    final metaStore = MemoryMetaStore();
     final publisher = _Publisher(
       unpub.App(
         metaStore: metaStore,
@@ -202,7 +151,7 @@ main() {
   test('rejects an archive that unpacks to more than the limit', () async {
     final directory = await Directory.systemTemp.createTemp('unpub_app');
     addTearDown(() => directory.delete(recursive: true));
-    final metaStore = _MemoryMetaStore();
+    final metaStore = MemoryMetaStore();
     final publisher = _Publisher(
       unpub.App(
         metaStore: metaStore,
@@ -225,7 +174,7 @@ main() {
   });
 
   test('shows the package page for authors with and without an email', () async {
-    final metaStore = _MemoryMetaStore();
+    final metaStore = MemoryMetaStore();
     await metaStore.addVersion(
       'unpub_fixture',
       unpub.UnpubVersion(
@@ -254,7 +203,7 @@ main() {
   });
 
   test('answers 404 for a package it does not have, instead of sending the client elsewhere', () async {
-    final app = unpub.App(metaStore: _MemoryMetaStore(), packageStore: unpub.FileStore(Directory.systemTemp.path));
+    final app = unpub.App(metaStore: MemoryMetaStore(), packageStore: unpub.FileStore(Directory.systemTemp.path));
 
     for (final path in [
       '/api/packages/http',
@@ -269,7 +218,7 @@ main() {
 
   test('redirects a package it does not have to the upstream server when asked to', () async {
     final app = unpub.App(
-      metaStore: _MemoryMetaStore(),
+      metaStore: MemoryMetaStore(),
       packageStore: unpub.FileStore(Directory.systemTemp.path),
       missingPackages: unpub.RedirectMissingPackages(Uri.parse('https://pub.dev')),
     );
@@ -282,7 +231,7 @@ main() {
 
   test('changes no uploaders of a package that does not exist', () async {
     final app = unpub.App(
-      metaStore: _MemoryMetaStore(),
+      metaStore: MemoryMetaStore(),
       packageStore: unpub.FileStore(Directory.systemTemp.path),
       overrideUploaderEmail: 'publisher@example.com',
     );
@@ -305,7 +254,7 @@ main() {
 
   test('asks for the email of the uploader to add', () async {
     final app = unpub.App(
-      metaStore: _MemoryMetaStore(),
+      metaStore: MemoryMetaStore(),
       packageStore: unpub.FileStore(Directory.systemTemp.path),
       overrideUploaderEmail: 'publisher@example.com',
     );
