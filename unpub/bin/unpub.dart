@@ -170,7 +170,7 @@ Future<S3StoreIamStore> _createAndInitS3Store({
       );
       refreshingCredentials.keepFresh();
       return S3StoreIamStore(
-        s3: AwsS3Worker(region: awsRegion, bucket: awsBucket),
+        s3: AwsS3Worker.inRegion(region: awsRegion, bucket: awsBucket),
         credentials: refreshingCredentials,
       );
   }
