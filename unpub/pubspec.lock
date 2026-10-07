@@ -420,10 +420,11 @@ packages:
   mongo_dart:
     dependency: "direct main"
     description:
-      name: mongo_dart
-      sha256: "24493b0cddcc01d7970a657267a1a8dbc703ab60dbf8f67ad2921d90bba9214f"
-      url: "https://pub.dev"
-    source: hosted
+      path: "."
+      ref: bd2a1a261bdda453e34ed971064c048cffb8cff1
+      resolved-ref: bd2a1a261bdda453e34ed971064c048cffb8cff1
+      url: "https://github.com/plentific/mongo_dart.git"
+    source: git
     version: "0.10.9"
   mongo_dart_query:
     dependency: transitive

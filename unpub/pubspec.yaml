@@ -21,7 +21,13 @@ dependencies:
   yaml: ^3.1.4
   pub_semver: ^2.2.1
   json_annotation: ^4.12.0
-  mongo_dart: ^0.10.9
+  # mongo_dart 0.10.9 with mongo-dart/mongo_dart#408, which accepts a hello
+  # reply without logicalSessionTimeoutMinutes (DocumentDB 3.6 leaves it out).
+  # Back to pub.dev once a release includes it.
+  mongo_dart:
+    git:
+      url: https://github.com/plentific/mongo_dart.git
+      ref: bd2a1a261bdda453e34ed971064c048cffb8cff1
   markdown: ^7.3.1
   mime: ^2.1.0
   sanitize_html: ^2.2.0
