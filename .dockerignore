@@ -1,0 +1,8 @@
+# The image needs the server package, the package it depends on by path,
+# and the entrypoint; leave out the rest of the checkout (.git included).
+*
+!docker/entrypoint.sh
+!unpub
+!unpub_aws
+**/.dart_tool
+**/build
