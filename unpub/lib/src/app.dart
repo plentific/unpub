@@ -139,7 +139,6 @@ class App {
 
   bool isPubClient(shelf.Request req) {
     var ua = req.headers[HttpHeaders.userAgentHeader];
-    print(ua);
     return ua != null && ua.toLowerCase().contains('dart pub');
   }
 
