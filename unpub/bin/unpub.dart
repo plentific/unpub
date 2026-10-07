@@ -52,6 +52,13 @@ main(List<String> arguments) async {
   );
   final server = await app.serve(host, port);
   print('Serving at http://${server.address.host}:${server.port}');
+
+  // As a container's PID 1 the server gets no default handling of SIGTERM,
+  // so without this Kubernetes waits out the grace period and kills it.
+  await ProcessSignal.sigterm.watch().first;
+  print('SIGTERM received, closing the server');
+  await Future.any([server.close(), Future.delayed(const Duration(seconds: 10))]);
+  exit(0);
 }
 
 Future<unpub.MetaStore> _createAndInitMongoDbStore(
