@@ -17,6 +17,16 @@ final class _MemoryMetaStore implements unpub.MetaStore {
   Future<unpub.UnpubPackage?> queryPackage(String name) async => packages[name];
 
   @override
+  Future<unpub.VersionDocs> queryVersionDocs(String name, String version) async {
+    for (final stored in [...?packages[name]?.versions]) {
+      if (stored.version == version) {
+        return unpub.VersionDocs(readme: stored.readme, changelog: stored.changelog);
+      }
+    }
+    return const unpub.VersionDocs(readme: null, changelog: null);
+  }
+
+  @override
   Future<void> addVersion(String name, unpub.UnpubVersion version) async {
     packages[name] = unpub.UnpubPackage(
       name,

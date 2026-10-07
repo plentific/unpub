@@ -27,6 +27,12 @@ main() {
     return res;
   }
 
+  Future<Map<String, dynamic>?> _readDocs(String name, String version) async {
+    var res = await _db.collection(docsCollection).findOne(where.eq('name', name).eq('version', version));
+    res?.remove('_id');
+    return res;
+  }
+
   Map<String, String> _pubspecCache = {};
 
   Future<String?> _readFile(String package, String version, String filename) async {
@@ -40,6 +46,7 @@ main() {
 
   _cleanUpDb() async {
     await _db.dropCollection(packageCollection);
+    await _db.dropCollection(docsCollection);
   }
 
   tearDownAll(() async {
@@ -78,11 +85,18 @@ main() {
       expect(
         DeepCollectionEquality().equals(item, {
           'version': version,
-          'pubspecYaml': await _readFile(package0, version, 'pubspec.yaml'),
           'pubspec': loadYamlAsMap(await _readFile(package0, version, 'pubspec.yaml')),
+          'uploader': email0,
+        }),
+        true,
+      );
+      expect(
+        DeepCollectionEquality().equals(await _readDocs(package0, version), {
+          'name': package0,
+          'version': version,
+          'pubspecYaml': await _readFile(package0, version, 'pubspec.yaml'),
           'readme': await _readFile(package0, version, 'README.md'),
           'changelog': await _readFile(package0, version, 'CHANGELOG.md'),
-          'uploader': email0,
         }),
         true,
       );
@@ -129,12 +143,79 @@ main() {
       expect(
         DeepCollectionEquality().equals(item, {
           'version': version,
-          'pubspecYaml': await _readFile(package0, version, 'pubspec.yaml'),
           'pubspec': loadYamlAsMap(await _readFile(package0, version, 'pubspec.yaml')),
           'uploader': email0,
         }),
         true,
       );
+      expect(
+        DeepCollectionEquality().equals(await _readDocs(package0, version), {
+          'name': package0,
+          'version': version,
+          'pubspecYaml': await _readFile(package0, version, 'pubspec.yaml'),
+          'readme': null,
+          'changelog': null,
+        }),
+        true,
+      );
+    });
+  });
+
+  group('version docs', () {
+    setUpAll(() async {
+      await _cleanUpDb();
+      _server = await createServer(email0);
+      // A package published before the docs moved out of package documents.
+      await _db.collection(packageCollection).insertOne({
+        'name': package0,
+        'versions': [
+          {
+            'version': '0.0.1',
+            'pubspec': loadYamlAsMap(await _readFile(package0, '0.0.1', 'pubspec.yaml')),
+            'pubspecYaml': await _readFile(package0, '0.0.1', 'pubspec.yaml'),
+            'uploader': email0,
+            'readme': 'legacy readme',
+            'changelog': 'legacy changelog',
+            'createdAt': DateTime.utc(2025, 1, 1),
+          },
+        ],
+        'uploaders': [email0],
+        'private': true,
+        'download': 0,
+        'createdAt': DateTime.utc(2025, 1, 1),
+        'updatedAt': DateTime.utc(2025, 1, 1),
+      });
+    });
+
+    tearDownAll(() async {
+      await _server.close();
+    });
+
+    Future<Map<String, dynamic>> readPage(String version) async {
+      var res = await http.get(baseUri.resolve('/webapi/package/$package0/$version'));
+      return json.decode(res.body)['data'] as Map<String, dynamic>;
+    }
+
+    test('are read from the package document until it is published again', () async {
+      var page = await readPage('0.0.1');
+
+      expect(page['readme'], 'legacy readme');
+      expect(page['changelog'], 'legacy changelog');
+    });
+
+    test('move out of the package document on its next publish', () async {
+      var result = await pubPublish(package0, '0.0.2');
+      expect(result.stderr, '');
+
+      var meta = await _readMeta(package0);
+      for (var version in meta['versions'] as List) {
+        expect(version, isNot(contains('readme')));
+        expect(version, isNot(contains('changelog')));
+        expect(version, isNot(contains('pubspecYaml')));
+      }
+      expect((await _readDocs(package0, '0.0.1'))!['readme'], 'legacy readme');
+      expect((await readPage('0.0.1'))['readme'], 'legacy readme');
+      expect((await readPage('0.0.2'))['readme'], await _readFile(package0, '0.0.2', 'README.md'));
     });
   });
 

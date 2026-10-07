@@ -1,6 +1,7 @@
 import 'package:unpub/src/meta_store.dart';
 import 'package:unpub/src/models.dart';
 import 'package:unpub/src/mongo_connection.dart';
+import 'package:unpub/src/version_docs.dart';
 
 /// A [MetaStore] that reopens the database connection before an operation
 /// when the server closed it, e.g. during a failover or maintenance.
@@ -18,6 +19,12 @@ final class ReconnectingMetaStore implements MetaStore {
   Future<UnpubPackage?> queryPackage(String name) async {
     await _connected();
     return _store.queryPackage(name);
+  }
+
+  @override
+  Future<VersionDocs> queryVersionDocs(String name, String version) async {
+    await _connected();
+    return _store.queryVersionDocs(name, version);
   }
 
   @override

@@ -41,6 +41,12 @@ final class _RecordingStore implements unpub.MetaStore {
   }
 
   @override
+  Future<unpub.VersionDocs> queryVersionDocs(String name, String version) async {
+    operations.add('queryVersionDocs $name');
+    return const unpub.VersionDocs(readme: null, changelog: null);
+  }
+
+  @override
   Future<void> addVersion(String name, unpub.UnpubVersion version) async {
     operations.add('addVersion $name');
   }

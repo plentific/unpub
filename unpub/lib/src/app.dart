@@ -527,6 +527,7 @@ class App {
       return semver.Version.prioritize(semver.Version.parse(b.version), semver.Version.parse(a.version));
     });
 
+    var docs = await metaStore.queryVersionDocs(package.name, packageVersion.version);
     var pubspec = packageVersion.pubspec;
     // `author` and `authors` are deprecated, but older pubspecs have them.
     var authors = switch ((pubspec['author'], pubspec['authors'])) {
@@ -544,8 +545,8 @@ class App {
       packageVersion.pubspec['homepage'] ?? '',
       package.uploaders ?? [],
       packageVersion.createdAt,
-      packageVersion.readme,
-      packageVersion.changelog,
+      docs.readme,
+      docs.changelog,
       versions,
       authors,
       depMap.keys.toList(),

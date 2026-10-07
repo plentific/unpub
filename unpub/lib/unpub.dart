@@ -7,3 +7,4 @@ export 'src/package_store.dart';
 export 'src/file_store.dart';
 export 'src/app.dart';
 export 'src/models.dart';
+export 'src/version_docs.dart';
