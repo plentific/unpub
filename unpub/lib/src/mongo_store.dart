@@ -68,13 +68,20 @@ class MongoStore extends MetaStore {
 
   @override
   increaseDownloads(name, version) {
+    // Not awaited, so counting never delays the download.
+    _countDownload(name, version);
+  }
+
+  Future<void> _countDownload(String name, String version) async {
     try {
       var today = DateFormat('yyyyMMdd').format(DateTime.now());
-      db.collection(packageCollection).update(_selectByName(name), modify.inc('download', 1));
-      db.collection(statsCollection).update(_selectByName(name), modify.inc('d$today', 1));
+      await Future.wait([
+        db.collection(packageCollection).update(_selectByName(name), modify.inc('download', 1)),
+        db.collection(statsCollection).update(_selectByName(name), modify.inc('d$today', 1)),
+      ]);
     } catch (e) {
+      print('Failed to count the download of $name $version: $e');
       onDatabaseError?.call(e.toString());
-      return;
     }
   }
 
