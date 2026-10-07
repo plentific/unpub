@@ -8,6 +8,7 @@ environment:
 
 dependencies:
   unpub:
+    path: ../unpub
   aws_signature_v4: ^0.6.13
   aws_common: ^0.7.15
   http: ^1.6.0
@@ -16,6 +17,7 @@ dependencies:
 dev_dependencies:
   lints: ^6.1.0
   test: ^1.32.0
-# dependency_overrides:
-#   unpub:
-#     path: ../unpub
+
+dependency_overrides:
+  # Same as in unpub: the mongo_dart fork still asks for uuid ^3.0.0.
+  uuid: ^4.5.1

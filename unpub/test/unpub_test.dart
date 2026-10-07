@@ -1,3 +1,7 @@
+// Needs a MongoDB server on localhost:27017.
+@Tags(['mongodb'])
+library;
+
 import 'dart:io';
 import 'dart:convert';
 import 'package:collection/collection.dart';
