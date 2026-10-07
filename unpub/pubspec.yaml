@@ -22,7 +22,9 @@ dependencies:
   pub_semver: ^2.0.0
   json_annotation: ^4.8.0
   mongo_dart:
-    git: https://github.com/plentific/mongo_dart.git
+    git:
+      url: https://github.com/plentific/mongo_dart.git
+      ref: c18deaabd7132e71b2d9524b0307449d71ca3c3e
   mime: ^1.0.0
   intl: ^0.17.0
   path: ^1.6.2
