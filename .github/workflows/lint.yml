@@ -18,5 +18,8 @@ jobs:
           sdk: 3.12.2
       - run: cd unpub && dart pub get --enforce-lockfile && dart analyze && dart test --concurrency 1
       - run: cd unpub_aws && dart pub get && dart analyze && dart test
-      # Generated files keep their generators' format.
-      - run: find unpub unpub_aws -name '*.dart' ! -name '*.g.dart' ! -path '*/.dart_tool/*' -print0 | xargs -0 dart format --set-exit-if-changed
+      - run: cd unpub_auth && dart pub get && dart analyze
+      # Generated files keep their generators' format. unpub_auth/lib/unpub_auth.dart
+      # keeps upstream's: it holds upstream's Google OAuth client, and GitHub's
+      # secret scanning blocks any push that changes the file.
+      - run: find unpub unpub_aws unpub_auth -name '*.dart' ! -name '*.g.dart' ! -path '*/.dart_tool/*' ! -path 'unpub_auth/lib/unpub_auth.dart' -print0 | xargs -0 dart format --set-exit-if-changed
