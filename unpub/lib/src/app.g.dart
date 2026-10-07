@@ -39,11 +39,14 @@ Router _$AppRouter(App service) {
     r'/webapi/package/<name>/<version>',
     service.getPackageDetail,
   );
-  router.add('GET', r'/', service.indexHtml);
-  router.add('GET', r'/packages', service.indexHtml);
-  router.add('GET', r'/packages/<name>', service.indexHtml);
-  router.add('GET', r'/packages/<name>/versions/<version>', service.indexHtml);
-  router.add('GET', r'/main.dart.js', service.mainDartJs);
+  router.add('GET', r'/', service.packageListPage);
+  router.add('GET', r'/packages', service.packageListPage);
+  router.add('GET', r'/packages/<name>', service.packagePage);
+  router.add(
+    'GET',
+    r'/packages/<name>/versions/<version>',
+    service.packagePage,
+  );
   router.add('GET', r'/badge/<type>/<name>', service.badge);
   return router;
 }

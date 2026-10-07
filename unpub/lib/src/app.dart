@@ -19,8 +19,8 @@ import 'package:unpub/src/meta_store.dart';
 import 'package:unpub/src/missing_packages.dart';
 import 'package:unpub/src/package_store.dart';
 import 'utils.dart';
-import 'static/index.html.dart' as index_html;
-import 'static/main.dart.js.dart' as main_dart_js;
+import 'web/markdown_renderer.dart';
+import 'web/web_pages.dart';
 
 part 'app.g.dart';
 
@@ -42,6 +42,9 @@ class App {
   /// Largest size an uploaded archive may unpack to, in bytes.
   final int maxUnpackedBytes;
 
+  /// Renders the web UI.
+  final WebPages webPages;
+
   /// http(s) proxy to call googleapis (to get uploader email)
   final String? googleapisProxy;
   final String? overrideUploaderEmail;
@@ -60,6 +63,7 @@ class App {
     this.missingPackages = const RejectMissingPackages(),
     this.maxArchiveBytes = 100 * 1024 * 1024,
     this.maxUnpackedBytes = 256 * 1024 * 1024,
+    this.webPages = const WebPages(markdown: MarkdownRenderer()),
     this.googleapisProxy,
     this.overrideUploaderEmail,
     this.uploadValidator,
@@ -450,20 +454,7 @@ class App {
     var size = int.tryParse(params['size'] ?? '') ?? 10;
     var page = int.tryParse(params['page'] ?? '') ?? 0;
     var sort = params['sort'] ?? 'download';
-    var q = params['q'];
-
-    String? keyword;
-    String? uploader;
-    String? dependency;
-
-    if (q == null) {
-    } else if (q.startsWith('email:')) {
-      uploader = q.substring(6).trim();
-    } else if (q.startsWith('dependency:')) {
-      dependency = q.substring(11).trim();
-    } else {
-      keyword = q;
-    }
+    var (:keyword, :uploader, :dependency) = _searchTerms(params['q']);
 
     final result = await metaStore.queryPackages(
       size: size,
@@ -556,29 +547,94 @@ class App {
 
   @Route.get('/')
   @Route.get('/packages')
-  @Route.get('/packages/<name>')
-  @Route.get('/packages/<name>/versions/<version>')
-  Future<shelf.Response> indexHtml(shelf.Request req) async {
-    if (req.params.entries.join('/').contains('tar.gz')) {
-      final splittedVersion = req.requestedUri.pathSegments.last.split('-');
-      final name = splittedVersion[0];
-      final unpreparedVersion = splittedVersion[1];
-      final version = unpreparedVersion.substring(0, unpreparedVersion.length - 7);
-      return download(req, name, version);
-    }
-
-    return shelf.Response.ok(index_html.content, headers: {HttpHeaders.contentTypeHeader: ContentType.html.mimeType});
+  Future<shelf.Response> packageListPage(shelf.Request req) async {
+    const pageSize = 10;
+    var params = req.requestedUri.queryParameters;
+    var page = switch (int.tryParse(params['page'] ?? '')) {
+      final page? when page > 0 => page,
+      _ => 0,
+    };
+    var query = params['q'];
+    var (:keyword, :uploader, :dependency) = _searchTerms(query);
+    var result = await metaStore.queryPackages(
+      size: pageSize,
+      page: page,
+      sort: 'download',
+      keyword: keyword,
+      uploader: uploader,
+      dependency: dependency,
+    );
+    return _html(webPages.packageList(result: result, query: query, page: page, pageSize: pageSize));
   }
 
-  @Route.get('/main.dart.js')
-  Future<shelf.Response> mainDartJs(shelf.Request req) async {
-    return shelf.Response.ok(main_dart_js.content, headers: {HttpHeaders.contentTypeHeader: 'text/javascript'});
+  @Route.get('/packages/<name>')
+  @Route.get('/packages/<name>/versions/<version>')
+  Future<shelf.Response> packagePage(shelf.Request req) async {
+    var name = req.params['name'];
+    var package = name == null ? null : await metaStore.queryPackage(name);
+    if (package == null) {
+      return _html(webPages.notFound('This server has no package named $name.'), status: HttpStatus.notFound);
+    }
+    var version = switch (req.params['version']) {
+      null => latestVersion(package),
+      final version => _findVersion(package, version),
+    };
+    if (version == null) {
+      return _html(
+        webPages.notFound('${package.name} has no version ${req.params['version']}.'),
+        status: HttpStatus.notFound,
+      );
+    }
+    var tab = switch (PackageTab.values.asNameMap()[req.requestedUri.queryParameters['tab']]) {
+      null => PackageTab.readme,
+      final tab => tab,
+    };
+    return _html(
+      webPages.packagePage(
+        package: package,
+        version: version,
+        docs: await metaStore.queryVersionDocs(package.name, version.version),
+        tab: tab,
+        server: Uri.parse(_resolveUrl(req, '/')),
+      ),
+    );
   }
 
   /// The version of [package] that a URL path names, as it is or with the
   /// `+` of build metadata sent as `%2B`.
   UnpubVersion? _findVersion(UnpubPackage package, String pathVersion) => package.versions.firstWhereOrNull(
     (item) => item.version == pathVersion || Uri.encodeComponent(item.version) == pathVersion,
+  );
+
+  /// A search for a name, or with `email:` for an uploader's packages and
+  /// with `dependency:` for the packages that depend on one.
+  ({String? keyword, String? uploader, String? dependency}) _searchTerms(String? query) => switch (query) {
+    null || '' => (keyword: null, uploader: null, dependency: null),
+    final query when query.startsWith('email:') => (
+      keyword: null,
+      uploader: query.substring(6).trim(),
+      dependency: null,
+    ),
+    final query when query.startsWith('dependency:') => (
+      keyword: null,
+      uploader: null,
+      dependency: query.substring(11).trim(),
+    ),
+    final query => (keyword: query, uploader: null, dependency: null),
+  };
+
+  static shelf.Response _html(String page, {int status = HttpStatus.ok}) => shelf.Response(
+    status,
+    body: page,
+    headers: {
+      HttpHeaders.contentTypeHeader: 'text/html; charset=utf-8',
+      // The pages have no scripts, so none may run, whatever a readme holds.
+      // Styles and fonts come from the page itself and Google Fonts, for
+      // Figtree, the font of Plentific's design tokens.
+      'content-security-policy':
+          "default-src 'none'; style-src 'unsafe-inline' https://fonts.googleapis.com; "
+          "font-src https://fonts.gstatic.com; img-src https: data:; form-action 'self'; base-uri 'none'",
+    },
   );
 
   String _getBadgeUrl(String label, String message, String color, Map<String, String> queryParameters) {
