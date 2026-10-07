@@ -4,6 +4,42 @@
 
 Unpub is a self-hosted private Dart Pub server for Enterprise, with a simple web interface to search and view packages information.
 
+## This fork
+
+This is Plentific's fork. Its server, `unpub/bin/unpub.dart`, keeps package metadata in a MongoDB compatible database (Amazon DocumentDB in production) and package archives in S3 through `unpub_aws`, with credentials from STS (IAM roles for service accounts on EKS). A package it does not have is answered with 404, not sent on to pub.dev.
+
+### Configuration
+
+The image's entrypoint passes these environment variables on:
+
+| Variable | Option | |
+| --- | --- | --- |
+| `DB_URL` | `--database` | MongoDB URI; `authMechanism` defaults to SCRAM-SHA-1, the one DocumentDB supports |
+| `CA_PATH` | `--tlsCAFile` | CA bundle for TLS to the database; empty for an unencrypted connection |
+| `HOST_NAME` | `--proxy-origin` | Public origin of the server, used in the archive URLs given to `dart pub` |
+
+The server also reads `AWS_ROLE_ARN`, `AWS_WEB_IDENTITY_TOKEN_FILE` (or `AWS_WEB_IDENTITY_TOKEN`), `AWS_REGION` (default `eu-west-1`) and `AWS_BUCKET_NAME`. EKS sets the first three for a pod with an IAM role; the bucket comes from the deployment. A missing setting stops the server at startup, before it connects to anything.
+
+### Deployment
+
+The Jenkinsfile builds `docker/Dockerfile` for every branch. On `master` it also writes the new image tag to plentific/devops-cd and syncs the ArgoCD application `unpub`, so merging to `master` deploys.
+
+### Logs
+
+The server logs to standard output, which is the pod's log (ArgoCD shows it too). Lines worth knowing:
+
+- `Connecting to database using …` then `Serving at http://0.0.0.0:4000`: a normal start.
+- `Database connection lost, reconnecting` and `Database reconnected`: the database closed the connection (a failover, maintenance). Requests during the reconnect fail; the next ones succeed.
+- `Refreshing AWS credentials failed, retrying in 30s: …`: STS refused a refresh. Uploads and downloads keep using the current credentials until they expire.
+- `Could not create the database indexes, serving without them: …`: usually two documents with the same package name.
+- `SIGTERM received, closing the server`: Kubernetes is stopping the pod.
+
+### Development
+
+- `dart test` in `unpub` runs every test. The ones tagged `mongodb` need MongoDB on localhost:27017 (`docker compose -f unpub_aws/docker-compose.yml up mongo`); `dart test --exclude-tags mongodb` leaves them out.
+- Generated code: `dart run build_runner build --delete-conflicting-outputs` in `unpub`.
+- Formatting: 120 columns, set in each package's `analysis_options.yaml`; generated `*.g.dart` files keep their generators' format.
+
 ## Screenshots
 
 ![Screenshot](https://raw.githubusercontent.com/bytedance/unpub/master/assets/screenshot.png)
