@@ -17,12 +17,14 @@ final class _ScriptedSource implements CredentialsSource {
 main() {
   test('fetches new credentials refreshMargin before the current ones expire', () async {
     final source = _ScriptedSource([
-      CredentialsFetched(AwsCredentials(
-        accessKeyId: 'second',
-        secretAccessKey: 'secret',
-        sessionToken: 'session',
-        expiration: DateTime.now().add(Duration(hours: 1)),
-      )),
+      CredentialsFetched(
+        AwsCredentials(
+          accessKeyId: 'second',
+          secretAccessKey: 'secret',
+          sessionToken: 'session',
+          expiration: DateTime.now().add(Duration(hours: 1)),
+        ),
+      ),
     ]);
     final credentials = RefreshingCredentials(
       source: source,
@@ -50,12 +52,14 @@ main() {
   test('keeps the current credentials and retries when a refresh is refused', () async {
     final source = _ScriptedSource([
       CredentialsRefused('STS unavailable'),
-      CredentialsFetched(AwsCredentials(
-        accessKeyId: 'second',
-        secretAccessKey: 'secret',
-        sessionToken: 'session',
-        expiration: DateTime.now().add(Duration(hours: 1)),
-      )),
+      CredentialsFetched(
+        AwsCredentials(
+          accessKeyId: 'second',
+          secretAccessKey: 'secret',
+          sessionToken: 'session',
+          expiration: DateTime.now().add(Duration(hours: 1)),
+        ),
+      ),
     ]);
     final credentials = RefreshingCredentials(
       source: source,

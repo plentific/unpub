@@ -56,8 +56,10 @@ main() {
     await tokenFile.writeAsString('token rotated by the kubelet');
     await source.fetch();
 
-    expect(requests.map((request) => request.bodyFields['WebIdentityToken']),
-        ['token issued at startup', 'token rotated by the kubelet']);
+    expect(requests.map((request) => request.bodyFields['WebIdentityToken']), [
+      'token issued at startup',
+      'token rotated by the kubelet',
+    ]);
     expect(requests.first.method, 'POST');
     expect(requests.first.url, endpoint);
     expect(requests.first.headers.containsKey('authorization'), isFalse);
@@ -92,7 +94,10 @@ main() {
 
     final reply = await source.fetch();
 
-    expect(reply, isA<CredentialsRefused>().having((refused) => refused.reason, 'reason', contains('InvalidIdentityToken')));
+    expect(
+      reply,
+      isA<CredentialsRefused>().having((refused) => refused.reason, 'reason', contains('InvalidIdentityToken')),
+    );
   });
 
   test('answers refused without calling STS when the token file cannot be read', () async {

@@ -22,16 +22,14 @@ main() {
   });
 
   Future<Map<String, dynamic>> _readMeta(String name) async {
-    var res =
-        await _db.collection(packageCollection).findOne(where.eq('name', name));
+    var res = await _db.collection(packageCollection).findOne(where.eq('name', name));
     res!.remove('_id'); // TODO: null
     return res;
   }
 
   Map<String, String> _pubspecCache = {};
 
-  Future<String?> _readFile(
-      String package, String version, String filename) async {
+  Future<String?> _readFile(String package, String version, String filename) async {
     var key = package + version + filename;
     if (_pubspecCache[key] == null) {
       var filePath = path.absolute('test/fixtures', package, version, filename);
@@ -82,8 +80,7 @@ main() {
         DeepCollectionEquality().equals(item, {
           'version': version,
           'pubspecYaml': await _readFile(package0, version, 'pubspec.yaml'),
-          'pubspec':
-              loadYamlAsMap(await _readFile(package0, version, 'pubspec.yaml')),
+          'pubspec': loadYamlAsMap(await _readFile(package0, version, 'pubspec.yaml')),
           'readme': await _readFile(package0, version, 'README.md'),
           'changelog': await _readFile(package0, version, 'CHANGELOG.md'),
           'uploader': email0,
@@ -134,8 +131,7 @@ main() {
         DeepCollectionEquality().equals(item, {
           'version': version,
           'pubspecYaml': await _readFile(package0, version, 'pubspec.yaml'),
-          'pubspec':
-              loadYamlAsMap(await _readFile(package0, version, 'pubspec.yaml')),
+          'pubspec': loadYamlAsMap(await _readFile(package0, version, 'pubspec.yaml')),
           'uploader': email0,
         }),
         true,
@@ -164,28 +160,22 @@ main() {
         DeepCollectionEquality().equals(body, {
           "name": "package_0",
           "latest": {
-            "archive_url":
-                "$pubHostedUrl/packages/package_0/versions/0.0.2.tar.gz",
-            "pubspec": loadYamlAsMap(
-                await _readFile('package_0', '0.0.2', 'pubspec.yaml')),
-            "version": "0.0.2"
+            "archive_url": "$pubHostedUrl/packages/package_0/versions/0.0.2.tar.gz",
+            "pubspec": loadYamlAsMap(await _readFile('package_0', '0.0.2', 'pubspec.yaml')),
+            "version": "0.0.2",
           },
           "versions": [
             {
-              "archive_url":
-                  "$pubHostedUrl/packages/package_0/versions/0.0.1.tar.gz",
-              "pubspec": loadYamlAsMap(
-                  await _readFile('package_0', '0.0.1', 'pubspec.yaml')),
-              "version": "0.0.1"
+              "archive_url": "$pubHostedUrl/packages/package_0/versions/0.0.1.tar.gz",
+              "pubspec": loadYamlAsMap(await _readFile('package_0', '0.0.1', 'pubspec.yaml')),
+              "version": "0.0.1",
             },
             {
-              "archive_url":
-                  "$pubHostedUrl/packages/package_0/versions/0.0.2.tar.gz",
-              "pubspec": loadYamlAsMap(
-                  await _readFile('package_0', '0.0.2', 'pubspec.yaml')),
-              "version": "0.0.2"
-            }
-          ]
+              "archive_url": "$pubHostedUrl/packages/package_0/versions/0.0.2.tar.gz",
+              "pubspec": loadYamlAsMap(await _readFile('package_0', '0.0.2', 'pubspec.yaml')),
+              "version": "0.0.2",
+            },
+          ],
         }),
         true,
       );
@@ -225,11 +215,9 @@ main() {
       var body = json.decode(res.body);
       expect(
         DeepCollectionEquality().equals(body, {
-          "archive_url":
-              "$pubHostedUrl/packages/package_0/versions/0.0.1.tar.gz",
-          "pubspec": loadYamlAsMap(
-              await _readFile('package_0', '0.0.1', 'pubspec.yaml')),
-          "version": '0.0.1'
+          "archive_url": "$pubHostedUrl/packages/package_0/versions/0.0.1.tar.gz",
+          "pubspec": loadYamlAsMap(await _readFile('package_0', '0.0.1', 'pubspec.yaml')),
+          "version": '0.0.1',
         }),
         true,
       );
@@ -242,11 +230,9 @@ main() {
       var body = json.decode(res.body);
       expect(
         DeepCollectionEquality().equals(body, {
-          "archive_url":
-              "$pubHostedUrl/packages/package_0/versions/0.0.3+1.tar.gz",
-          "pubspec": loadYamlAsMap(
-              await _readFile('package_0', '0.0.3+1', 'pubspec.yaml')),
-          "version": '0.0.3+1'
+          "archive_url": "$pubHostedUrl/packages/package_0/versions/0.0.3+1.tar.gz",
+          "pubspec": loadYamlAsMap(await _readFile('package_0', '0.0.3+1', 'pubspec.yaml')),
+          "version": '0.0.3+1',
         }),
         true,
       );
@@ -366,27 +352,30 @@ main() {
     group('v', () {
       test('<1.0.0', () async {
         var res = await http.Client().send(
-            http.Request('GET', baseUri.resolve('/badge/v/$package0'))
-              ..followRedirects = false);
+          http.Request('GET', baseUri.resolve('/badge/v/$package0'))..followRedirects = false,
+        );
         expect(res.statusCode, HttpStatus.found);
-        expect(res.headers[HttpHeaders.locationHeader],
-            'https://img.shields.io/static/v1?label=unpub&message=0.0.1&color=orange');
+        expect(
+          res.headers[HttpHeaders.locationHeader],
+          'https://img.shields.io/static/v1?label=unpub&message=0.0.1&color=orange',
+        );
       });
 
       test('>=1.0.0', () async {
         await pubPublish(package0, '1.0.0');
 
         var res = await http.Client().send(
-            http.Request('GET', baseUri.resolve('/badge/v/$package0'))
-              ..followRedirects = false);
+          http.Request('GET', baseUri.resolve('/badge/v/$package0'))..followRedirects = false,
+        );
         expect(res.statusCode, HttpStatus.found);
-        expect(res.headers[HttpHeaders.locationHeader],
-            'https://img.shields.io/static/v1?label=unpub&message=1.0.0&color=blue');
+        expect(
+          res.headers[HttpHeaders.locationHeader],
+          'https://img.shields.io/static/v1?label=unpub&message=1.0.0&color=blue',
+        );
       });
 
       test('package not exists', () async {
-        var res =
-            await http.get(baseUri.resolve('/badge/v/$notExistingPacakge'));
+        var res = await http.get(baseUri.resolve('/badge/v/$notExistingPacakge'));
         expect(res.statusCode, HttpStatus.notFound);
       });
     });
@@ -394,16 +383,17 @@ main() {
     group('d', () {
       test('correct download count', () async {
         var res = await http.Client().send(
-            http.Request('GET', baseUri.resolve('/badge/d/$package0'))
-              ..followRedirects = false);
+          http.Request('GET', baseUri.resolve('/badge/d/$package0'))..followRedirects = false,
+        );
         expect(res.statusCode, HttpStatus.found);
-        expect(res.headers[HttpHeaders.locationHeader],
-            'https://img.shields.io/static/v1?label=downloads&message=0&color=blue');
+        expect(
+          res.headers[HttpHeaders.locationHeader],
+          'https://img.shields.io/static/v1?label=downloads&message=0&color=blue',
+        );
       });
 
       test('package not exists', () async {
-        var res =
-            await http.get(baseUri.resolve('/badge/d/$notExistingPacakge'));
+        var res = await http.get(baseUri.resolve('/badge/d/$notExistingPacakge'));
         expect(res.statusCode, HttpStatus.notFound);
       });
     });

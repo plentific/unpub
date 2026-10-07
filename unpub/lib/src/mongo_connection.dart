@@ -47,14 +47,14 @@ final class DbConnection implements MongoConnection {
 
   @override
   Future<void> open() => switch (_transport) {
-        PlainTransport() => _db.open(secure: false),
-        TlsTransport(:final caFile, :final certificateKeyFile, :final certificateKeyFilePassword) => _db.open(
-            secure: true,
-            tlsCAFile: caFile,
-            tlsCertificateKeyFile: certificateKeyFile,
-            tlsCertificateKeyFilePassword: certificateKeyFilePassword,
-          ),
-      };
+    PlainTransport() => _db.open(secure: false),
+    TlsTransport(:final caFile, :final certificateKeyFile, :final certificateKeyFilePassword) => _db.open(
+      secure: true,
+      tlsCAFile: caFile,
+      tlsCertificateKeyFile: certificateKeyFile,
+      tlsCertificateKeyFilePassword: certificateKeyFilePassword,
+    ),
+  };
 
   @override
   Future<void> close() => _db.close();

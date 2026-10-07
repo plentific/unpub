@@ -34,17 +34,10 @@ final class StsWebIdentityCredentialsSource implements CredentialsSource {
   final Uri _endpoint;
   final AwsWebIdentity _webIdentity;
 
-  StsWebIdentityCredentialsSource({
-    required this._http,
-    required this._endpoint,
-    required this._webIdentity,
-  });
+  StsWebIdentityCredentialsSource({required this._http, required this._endpoint, required this._webIdentity});
 
   /// Calls the regional STS endpoint of [region].
-  factory StsWebIdentityCredentialsSource.inRegion({
-    required String region,
-    required AwsWebIdentity webIdentity,
-  }) =>
+  factory StsWebIdentityCredentialsSource.inRegion({required String region, required AwsWebIdentity webIdentity}) =>
       StsWebIdentityCredentialsSource(
         http: http.Client(),
         endpoint: Uri.https('sts.$region.amazonaws.com', '/'),
@@ -54,26 +47,31 @@ final class StsWebIdentityCredentialsSource implements CredentialsSource {
   @override
   Future<CredentialsReply> fetch() async {
     try {
-      final response = await _http.post(_endpoint, body: {
-        'Action': 'AssumeRoleWithWebIdentity',
-        'Version': '2011-06-15',
-        'RoleArn': _webIdentity.roleArn,
-        'RoleSessionName': _webIdentity.roleSessionName,
-        'WebIdentityToken': switch (_webIdentity.token) {
-          InlineWebIdentityToken(:final token) => token,
-          FileWebIdentityToken(:final file) => await file.readAsString(),
+      final response = await _http.post(
+        _endpoint,
+        body: {
+          'Action': 'AssumeRoleWithWebIdentity',
+          'Version': '2011-06-15',
+          'RoleArn': _webIdentity.roleArn,
+          'RoleSessionName': _webIdentity.roleSessionName,
+          'WebIdentityToken': switch (_webIdentity.token) {
+            InlineWebIdentityToken(:final token) => token,
+            FileWebIdentityToken(:final file) => await file.readAsString(),
+          },
         },
-      });
+      );
       if (response.statusCode != 200) {
         return CredentialsRefused('STS answered ${response.statusCode}: ${response.body}');
       }
       final document = XmlDocument.parse(response.body);
-      return CredentialsFetched(AwsCredentials(
-        accessKeyId: _text(document, 'AccessKeyId'),
-        secretAccessKey: _text(document, 'SecretAccessKey'),
-        sessionToken: _text(document, 'SessionToken'),
-        expiration: DateTime.parse(_text(document, 'Expiration')),
-      ));
+      return CredentialsFetched(
+        AwsCredentials(
+          accessKeyId: _text(document, 'AccessKeyId'),
+          secretAccessKey: _text(document, 'SecretAccessKey'),
+          sessionToken: _text(document, 'SessionToken'),
+          expiration: DateTime.parse(_text(document, 'Expiration')),
+        ),
+      );
     } catch (e) {
       return CredentialsRefused('$e');
     }

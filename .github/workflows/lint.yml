@@ -10,4 +10,5 @@ jobs:
       - uses: actions/checkout@v4
       - run: cd unpub && dart pub get --enforce-lockfile && dart analyze && dart test --exclude-tags mongodb
       - run: cd unpub_aws && dart pub get && dart analyze && dart test
-      - run: dart format --set-exit-if-changed unpub unpub_aws
+      # Generated files keep their generators' format.
+      - run: find unpub unpub_aws -name '*.dart' ! -name '*.g.dart' ! -path '*/.dart_tool/*' -print0 | xargs -0 dart format --set-exit-if-changed

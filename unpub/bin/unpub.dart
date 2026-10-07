@@ -80,16 +80,16 @@ Future<unpub.MetaStore> _createAndInitMongoDbStore(
   final transport = switch (tlsCAFile) {
     null || '' => const unpub.PlainTransport(),
     final caFile => unpub.TlsTransport(
-        caFile: caFile,
-        certificateKeyFile: switch (tlsCertificateKeyFile) {
-          null || '' => null,
-          final file => file,
-        },
-        certificateKeyFilePassword: switch (tlsCertificateKeyFilePassword) {
-          null || '' => null,
-          final password => password,
-        },
-      ),
+      caFile: caFile,
+      certificateKeyFile: switch (tlsCertificateKeyFile) {
+        null || '' => null,
+        final file => file,
+      },
+      certificateKeyFilePassword: switch (tlsCertificateKeyFilePassword) {
+        null || '' => null,
+        final password => password,
+      },
+    ),
   };
   print(switch (transport) {
     unpub.PlainTransport() => 'Connecting to database using not secure connection',
@@ -158,8 +158,10 @@ Future<S3StoreIamStore> _createAndInitS3Store({
     token: switch ((webIdentityToken, webIdentityTokenFile)) {
       (final String token, _) when token.isNotEmpty => InlineWebIdentityToken(token),
       (_, final String path) when path.isNotEmpty => FileWebIdentityToken(File(path)),
-      _ => throw ArgumentError('Pass --webIdentityTokenFile or --webIdentityToken, or set '
-          'AWS_WEB_IDENTITY_TOKEN_FILE or AWS_WEB_IDENTITY_TOKEN.'),
+      _ => throw ArgumentError(
+        'Pass --webIdentityTokenFile or --webIdentityToken, or set '
+        'AWS_WEB_IDENTITY_TOKEN_FILE or AWS_WEB_IDENTITY_TOKEN.',
+      ),
     },
   );
   final awsRegion = switch (region) {

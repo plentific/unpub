@@ -46,15 +46,7 @@ class UnpubPackage {
 
   final int? download;
 
-  UnpubPackage(
-    this.name,
-    this.versions,
-    this.private,
-    this.uploaders,
-    this.createdAt,
-    this.updatedAt,
-    this.download,
-  );
+  UnpubPackage(this.name, this.versions, this.private, this.uploaders, this.createdAt, this.updatedAt, this.download);
 
   factory UnpubPackage.fromJson(Map<String, dynamic> map) => _$UnpubPackageFromJson(map);
 }

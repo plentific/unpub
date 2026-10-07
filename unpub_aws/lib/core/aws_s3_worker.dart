@@ -12,11 +12,7 @@ final class AwsS3Worker {
   final String _region;
   final String _bucket;
 
-  AwsS3Worker({
-    required this._http,
-    required this._region,
-    required this._bucket,
-  });
+  AwsS3Worker({required this._http, required this._region, required this._bucket});
 
   /// Sends its requests through one long-lived client, so connections to S3
   /// are reused.
@@ -36,8 +32,10 @@ final class AwsS3Worker {
     final signedRequest = await _signRequest(credentials: credentials, request: request);
     final response = await signedRequest.send(client: _http).response;
     if (response.statusCode != HttpStatus.ok) {
-      throw Exception('S3 file upload error. Status code ${response.statusCode}. \n'
-          '${utf8.decode(await response.bodyBytes, allowMalformed: true)}');
+      throw Exception(
+        'S3 file upload error. Status code ${response.statusCode}. \n'
+        '${utf8.decode(await response.bodyBytes, allowMalformed: true)}',
+      );
     }
   }
 
@@ -52,8 +50,10 @@ final class AwsS3Worker {
     // Without this check an S3 error (e.g. 403 for expired credentials) is
     // served to `dart pub` as the package archive.
     if (response.statusCode != HttpStatus.ok) {
-      throw Exception('S3 file download error. Status code ${response.statusCode}. \n'
-          '${utf8.decode(await response.bodyBytes, allowMalformed: true)}');
+      throw Exception(
+        'S3 file download error. Status code ${response.statusCode}. \n'
+        '${utf8.decode(await response.bodyBytes, allowMalformed: true)}',
+      );
     }
     yield* response.body;
   }
@@ -64,17 +64,10 @@ final class AwsS3Worker {
   }) async {
     final signer = AWSSigV4Signer(
       credentialsProvider: AWSCredentialsProvider(
-        AWSCredentials(
-          credentials.accessKeyId,
-          credentials.secretAccessKey,
-          credentials.sessionToken,
-        ),
+        AWSCredentials(credentials.accessKeyId, credentials.secretAccessKey, credentials.sessionToken),
       ),
     );
-    final scope = AWSCredentialScope(
-      region: _region,
-      service: AWSService.s3,
-    );
+    final scope = AWSCredentialScope(region: _region, service: AWSService.s3);
     return signer.sign(request, credentialScope: scope);
   }
 

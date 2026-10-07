@@ -30,16 +30,19 @@ class MongoStore extends MetaStore {
   @override
   addVersion(name, version) async {
     try {
-      await db.collection(packageCollection).update(
-          _selectByName(name),
-          modify
-              .push('versions', version.toJson())
-              .addToSet('uploaders', version.uploader)
-              .setOnInsert('createdAt', version.createdAt)
-              .setOnInsert('private', true)
-              .setOnInsert('download', 0)
-              .set('updatedAt', version.createdAt),
-          upsert: true);
+      await db
+          .collection(packageCollection)
+          .update(
+            _selectByName(name),
+            modify
+                .push('versions', version.toJson())
+                .addToSet('uploaders', version.uploader)
+                .setOnInsert('createdAt', version.createdAt)
+                .setOnInsert('private', true)
+                .setOnInsert('download', 0)
+                .set('updatedAt', version.createdAt),
+            upsert: true,
+          );
     } catch (e) {
       onDatabaseError?.call(e.toString());
       return Future.error(e);
@@ -103,10 +106,13 @@ class MongoStore extends MetaStore {
           .length;
       final packages = await db
           .collection(packageCollection)
-          .find(_packagesMatching(keyword, uploader, dependency)
-              .sortBy(sort, descending: true)
-              .limit(size)
-              .skip(page * size))
+          .find(
+            _packagesMatching(
+              keyword,
+              uploader,
+              dependency,
+            ).sortBy(sort, descending: true).limit(size).skip(page * size),
+          )
           .map((item) => UnpubPackage.fromJson(item))
           .toList();
 
@@ -131,9 +137,9 @@ class MongoStore extends MetaStore {
       selector = selector.raw({
         'versions': {
           r'$elemMatch': {
-            'pubspec.dependencies.$dependency': {r'$exists': true}
-          }
-        }
+            'pubspec.dependencies.$dependency': {r'$exists': true},
+          },
+        },
       });
     }
     return selector;

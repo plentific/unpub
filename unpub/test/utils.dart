@@ -21,11 +21,7 @@ createServer(String opEmail) async {
   await db.open();
   var mongoStore = unpub.MongoStore(db);
 
-  var app = unpub.App(
-    metaStore: mongoStore,
-    packageStore: unpub.FileStore(baseDir),
-    overrideUploaderEmail: opEmail,
-  );
+  var app = unpub.App(metaStore: mongoStore, packageStore: unpub.FileStore(baseDir), overrideUploaderEmail: opEmail);
 
   var server = await app.serve('0.0.0.0', 4000);
   return server;
@@ -43,15 +39,21 @@ Future<http.Response> getSpecificVersion(String package, String version) {
 }
 
 Future<ProcessResult> pubPublish(String name, String version) {
-  return Process.run('dart', ['pub', 'publish', '--force'],
-      workingDirectory: path.absolute('test/fixtures', name, version),
-      environment: {'PUB_HOSTED_URL': pubHostedUrl});
+  return Process.run(
+    'dart',
+    ['pub', 'publish', '--force'],
+    workingDirectory: path.absolute('test/fixtures', name, version),
+    environment: {'PUB_HOSTED_URL': pubHostedUrl},
+  );
 }
 
 Future<ProcessResult> pubUploader(String name, String operation, String email) {
   assert(['add', 'remove'].contains(operation), 'operation error');
 
-  return Process.run('dart', ['pub', 'uploader', operation, email],
-      workingDirectory: path.absolute('test/fixtures', name, '0.0.1'),
-      environment: {'PUB_HOSTED_URL': pubHostedUrl});
+  return Process.run(
+    'dart',
+    ['pub', 'uploader', operation, email],
+    workingDirectory: path.absolute('test/fixtures', name, '0.0.1'),
+    environment: {'PUB_HOSTED_URL': pubHostedUrl},
+  );
 }

@@ -6,9 +6,5 @@ final class AwsWebIdentity {
   final String roleSessionName;
   final WebIdentityToken token;
 
-  const AwsWebIdentity({
-    required this.roleArn,
-    required this.roleSessionName,
-    required this.token,
-  });
+  const AwsWebIdentity({required this.roleArn, required this.roleSessionName, required this.token});
 }

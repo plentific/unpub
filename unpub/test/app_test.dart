@@ -46,8 +46,7 @@ final class _MemoryMetaStore implements unpub.MetaStore {
     String? keyword,
     String? uploader,
     String? dependency,
-  }) async =>
-      unpub.UnpubQueryResult(packages.length, packages.values.toList());
+  }) async => unpub.UnpubQueryResult(packages.length, packages.values.toList());
 }
 
 main() {
@@ -66,7 +65,9 @@ main() {
     final upload = http.MultipartRequest('POST', Uri.parse('http://localhost/api/packages/versions/newUpload'));
     upload.files.add(http.MultipartFile.fromBytes('file', archive, filename: 'package.tar.gz'));
     final uploadBody = await upload.finalize().toBytes();
-    final uploaded = await app.router.call(shelf.Request('POST', upload.url, headers: upload.headers, body: uploadBody));
+    final uploaded = await app.router.call(
+      shelf.Request('POST', upload.url, headers: upload.headers, body: uploadBody),
+    );
 
     expect(uploaded.statusCode, HttpStatus.found);
     expect(uploaded.headers['location'], 'http://localhost/api/packages/versions/newUploadFinish');
@@ -76,17 +77,21 @@ main() {
     expect(version.readme, contains('Published by the unpub tests.'));
     expect(version.changelog, contains('Fixture release.'));
 
-    final versions = await app.router.call(shelf.Request('GET', Uri.parse('http://localhost/api/packages/unpub_fixture')));
+    final versions = await app.router.call(
+      shelf.Request('GET', Uri.parse('http://localhost/api/packages/unpub_fixture')),
+    );
     final latest = (jsonDecode(await versions.readAsString()) as Map<String, dynamic>)['latest'];
 
     expect(latest['version'], '1.2.3');
     expect(latest['archive_url'], 'http://localhost/packages/unpub_fixture/versions/1.2.3.tar.gz');
 
-    final download = await app.router.call(shelf.Request(
-      'GET',
-      Uri.parse('http://localhost/packages/unpub_fixture/versions/1.2.3.tar.gz'),
-      headers: {'user-agent': 'Dart pub 3.12.2'},
-    ));
+    final download = await app.router.call(
+      shelf.Request(
+        'GET',
+        Uri.parse('http://localhost/packages/unpub_fixture/versions/1.2.3.tar.gz'),
+        headers: {'user-agent': 'Dart pub 3.12.2'},
+      ),
+    );
 
     expect(download.statusCode, HttpStatus.ok);
     expect(await download.read().expand((chunk) => chunk).toList(), archive);
@@ -100,12 +105,14 @@ main() {
       overrideUploaderEmail: 'publisher@example.com',
     );
 
-    final added = await app.router.call(shelf.Request(
-      'POST',
-      Uri.parse('http://localhost/api/packages/missing/uploaders'),
-      headers: {'content-type': 'application/x-www-form-urlencoded'},
-      body: 'email=someone%40example.com',
-    ));
+    final added = await app.router.call(
+      shelf.Request(
+        'POST',
+        Uri.parse('http://localhost/api/packages/missing/uploaders'),
+        headers: {'content-type': 'application/x-www-form-urlencoded'},
+        body: 'email=someone%40example.com',
+      ),
+    );
     final removed = await app.router.call(
       shelf.Request('DELETE', Uri.parse('http://localhost/api/packages/missing/uploaders/someone%40example.com')),
     );
@@ -121,12 +128,14 @@ main() {
       overrideUploaderEmail: 'publisher@example.com',
     );
 
-    final added = await app.router.call(shelf.Request(
-      'POST',
-      Uri.parse('http://localhost/api/packages/unpub_fixture/uploaders'),
-      headers: {'content-type': 'application/x-www-form-urlencoded'},
-      body: '',
-    ));
+    final added = await app.router.call(
+      shelf.Request(
+        'POST',
+        Uri.parse('http://localhost/api/packages/unpub_fixture/uploaders'),
+        headers: {'content-type': 'application/x-www-form-urlencoded'},
+        body: '',
+      ),
+    );
 
     expect(added.statusCode, HttpStatus.badRequest);
   });
