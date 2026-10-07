@@ -216,6 +216,38 @@ main() {
     }
   });
 
+  test('finds a version as it is or percent-encoded, and answers 404 for one it does not have', () async {
+    final metaStore = MemoryMetaStore();
+    await metaStore.addVersion(
+      'acme_ui',
+      unpub.UnpubVersion(
+        '1.0.0+1',
+        {'name': 'acme_ui', 'version': '1.0.0+1'},
+        null,
+        'publisher@example.com',
+        null,
+        null,
+        DateTime.utc(2026, 1, 2),
+      ),
+    );
+    final app = unpub.App(metaStore: metaStore, packageStore: unpub.FileStore(Directory.systemTemp.path));
+
+    for (final (path, status) in [
+      ('/api/packages/acme_ui/versions/1.0.0+1', HttpStatus.ok),
+      ('/api/packages/acme_ui/versions/1.0.0%2B1', HttpStatus.ok),
+      ('/packages/acme_ui/versions/1.0.0%2B1', HttpStatus.ok),
+      ('/api/packages/acme_ui/versions/9.9.9', HttpStatus.notFound),
+      ('/packages/acme_ui/versions/9.9.9.tar.gz', HttpStatus.notFound),
+    ]) {
+      final response = await app.router.call(
+        shelf.Request('GET', Uri.parse('http://localhost$path'), headers: {'user-agent': 'Dart pub 3.12.2'}),
+      );
+
+      expect(response.statusCode, status, reason: path);
+    }
+    expect(metaStore.downloads, isEmpty);
+  });
+
   test('redirects a package it does not have to the upstream server when asked to', () async {
     final app = unpub.App(
       metaStore: MemoryMetaStore(),

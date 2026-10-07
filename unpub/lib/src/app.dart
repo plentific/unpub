@@ -222,19 +222,12 @@ class App {
 
   @Route.get('/api/packages/<name>/versions/<version>')
   Future<shelf.Response> getVersion(shelf.Request req, String name, String version) async {
-    // Important: + -> %2B, should be decoded here
-    try {
-      version = Uri.decodeComponent(version);
-    } catch (err) {
-      print(err);
-    }
-
     var package = await metaStore.queryPackage(name);
     if (package == null) {
       return _missing('/api/packages/$name/versions/$version');
     }
 
-    var packageVersion = package.versions.firstWhereOrNull((item) => item.version == version);
+    var packageVersion = _findVersion(package, version);
     if (packageVersion == null) {
       return shelf.Response.notFound('Not Found');
     }
@@ -249,15 +242,20 @@ class App {
       return _missing('/packages/$name/versions/$version.tar.gz');
     }
 
+    var packageVersion = _findVersion(package, version);
+    if (packageVersion == null) {
+      return shelf.Response.notFound('Not Found');
+    }
+
     if (isPubClient(req)) {
-      metaStore.increaseDownloads(name, version);
+      metaStore.increaseDownloads(name, packageVersion.version);
     }
 
     if (packageStore.supportsDownloadUrl) {
-      return shelf.Response.found(await packageStore.downloadUrl(name, version));
+      return shelf.Response.found(await packageStore.downloadUrl(name, packageVersion.version));
     } else {
       return shelf.Response.ok(
-        packageStore.download(name, version),
+        packageStore.download(name, packageVersion.version),
         headers: {HttpHeaders.contentTypeHeader: ContentType.binary.mimeType},
       );
     }
@@ -576,6 +574,12 @@ class App {
   Future<shelf.Response> mainDartJs(shelf.Request req) async {
     return shelf.Response.ok(main_dart_js.content, headers: {HttpHeaders.contentTypeHeader: 'text/javascript'});
   }
+
+  /// The version of [package] that a URL path names, as it is or with the
+  /// `+` of build metadata sent as `%2B`.
+  UnpubVersion? _findVersion(UnpubPackage package, String pathVersion) => package.versions.firstWhereOrNull(
+    (item) => item.version == pathVersion || Uri.encodeComponent(item.version) == pathVersion,
+  );
 
   String _getBadgeUrl(String label, String message, String color, Map<String, String> queryParameters) {
     var badgeUri = Uri.parse('https://img.shields.io/static/v1');
