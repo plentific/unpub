@@ -18,7 +18,6 @@ main(List<String> arguments) async {
   final port = int.parse(args['port'] as String);
   final dbUri = args['database'] as String;
   final proxyOrigin = args['proxy-origin'] as String;
-  final exitOnDbError = (args['exitOnDbError'] as String?) == 'true';
   final roleArn = args['roleArn'] as String?;
   final roleSessionName = args['roleSessionName'] as String?;
   final webIdentityToken = args['webIdentityToken'] as String?;
@@ -31,7 +30,6 @@ main(List<String> arguments) async {
 
   final mongoDbStore = await _createAndInitMongoDbStore(
     dbUri,
-    exitOnDbError,
     tlsCAFile: tlsCAFile,
     tlsCertificateKeyFile: tlsCertificateKeyFile,
     tlsCertificateKeyFilePassword: tlsCertificateKeyFilePassword,
@@ -62,8 +60,7 @@ main(List<String> arguments) async {
 }
 
 Future<unpub.MetaStore> _createAndInitMongoDbStore(
-  String dbUri,
-  bool exitOnDbError, {
+  String dbUri, {
   String? tlsCAFile,
   String? tlsCertificateKeyFile,
   String? tlsCertificateKeyFilePassword,
@@ -98,15 +95,7 @@ Future<unpub.MetaStore> _createAndInitMongoDbStore(
   final connection = unpub.DbConnection(db: db, transport: transport);
   await connection.open();
 
-  final mongoStore = MongoStore(
-    db,
-    onDatabaseError: exitOnDbError
-        ? (error) {
-            print('Database error: $error Exiting...');
-            exit(1);
-          }
-        : null,
-  );
+  final mongoStore = MongoStore(db);
   try {
     await mongoStore.createIndexes();
   } catch (e) {
@@ -123,7 +112,6 @@ ArgResults _parseArgs(List<String> args, Map<String, dynamic> environment) {
   parser.addOption('port', abbr: 'p', defaultsTo: '4000');
   parser.addOption('database', abbr: 'd', defaultsTo: 'mongodb://localhost:27017/dart_pub');
   parser.addOption('proxy-origin', abbr: 'o', defaultsTo: '');
-  parser.addOption('exitOnDbError', abbr: 'e', defaultsTo: 'false');
   parser.addOption('roleArn', defaultsTo: environment['AWS_ROLE_ARN']);
   parser.addOption('roleSessionName', defaultsTo: 'unpubConnection');
   parser.addOption('webIdentityToken', defaultsTo: environment['AWS_WEB_IDENTITY_TOKEN']);

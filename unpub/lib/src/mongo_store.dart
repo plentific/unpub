@@ -13,9 +13,8 @@ final docsCollection = 'version_docs';
 
 class MongoStore extends MetaStore {
   Db db;
-  Function(String)? onDatabaseError;
 
-  MongoStore(this.db, {this.onDatabaseError});
+  MongoStore(this.db);
 
   static SelectorBuilder _selectByName(String? name) => where.eq('name', name);
 
@@ -28,14 +27,9 @@ class MongoStore extends MetaStore {
 
   @override
   queryPackage(name) async {
-    try {
-      var json = await db.collection(packageCollection).findOne(_withoutDocs(_selectByName(name)));
-      if (json == null) return null;
-      return UnpubPackage.fromJson(json);
-    } catch (e) {
-      onDatabaseError?.call(e.toString());
-      return Future.error(e);
-    }
+    var json = await db.collection(packageCollection).findOne(_withoutDocs(_selectByName(name)));
+    if (json == null) return null;
+    return UnpubPackage.fromJson(json);
   }
 
   /// Creates the indexes lookups use. Unique package names also stop two
@@ -54,76 +48,56 @@ class MongoStore extends MetaStore {
 
   @override
   Future<VersionDocs> queryVersionDocs(String name, String version) async {
-    try {
-      var docs = await db.collection(docsCollection).findOne(_selectVersion(name, version));
-      if (docs != null) {
-        return VersionDocs(readme: docs['readme'] as String?, changelog: docs['changelog'] as String?);
-      }
-      // A version of a package whose docs were not moved out of its document yet.
-      var package = await db.collection(packageCollection).findOne(_selectByName(name));
-      for (var stored in package == null ? const [] : package['versions'] as List) {
-        if (stored is Map && stored['version'] == version) {
-          return VersionDocs(readme: stored['readme'] as String?, changelog: stored['changelog'] as String?);
-        }
-      }
-      return const VersionDocs(readme: null, changelog: null);
-    } catch (e) {
-      onDatabaseError?.call(e.toString());
-      return Future.error(e);
+    var docs = await db.collection(docsCollection).findOne(_selectVersion(name, version));
+    if (docs != null) {
+      return VersionDocs(readme: docs['readme'] as String?, changelog: docs['changelog'] as String?);
     }
+    // A version of a package whose docs were not moved out of its document yet.
+    var package = await db.collection(packageCollection).findOne(_selectByName(name));
+    for (var stored in package == null ? const [] : package['versions'] as List) {
+      if (stored is Map && stored['version'] == version) {
+        return VersionDocs(readme: stored['readme'] as String?, changelog: stored['changelog'] as String?);
+      }
+    }
+    return const VersionDocs(readme: null, changelog: null);
   }
 
   @override
   addVersion(name, version) async {
-    try {
-      await _storeDocs(name, version.version, version.readme, version.changelog, version.pubspecYaml);
-      var withoutDocs = UnpubVersion(
-        version.version,
-        version.pubspec,
-        null,
-        version.uploader,
-        null,
-        null,
-        version.createdAt,
-      );
-      await db
-          .collection(packageCollection)
-          .update(
-            _selectByName(name),
-            modify
-                .push('versions', withoutDocs.toJson())
-                .addToSet('uploaders', version.uploader)
-                .setOnInsert('createdAt', version.createdAt)
-                .setOnInsert('private', true)
-                .setOnInsert('download', 0)
-                .set('updatedAt', version.createdAt),
-            upsert: true,
-          );
-      await _moveDocsOutOfPackage(name);
-    } catch (e) {
-      onDatabaseError?.call(e.toString());
-      return Future.error(e);
-    }
+    await _storeDocs(name, version.version, version.readme, version.changelog, version.pubspecYaml);
+    var withoutDocs = UnpubVersion(
+      version.version,
+      version.pubspec,
+      null,
+      version.uploader,
+      null,
+      null,
+      version.createdAt,
+    );
+    await db
+        .collection(packageCollection)
+        .update(
+          _selectByName(name),
+          modify
+              .push('versions', withoutDocs.toJson())
+              .addToSet('uploaders', version.uploader)
+              .setOnInsert('createdAt', version.createdAt)
+              .setOnInsert('private', true)
+              .setOnInsert('download', 0)
+              .set('updatedAt', version.createdAt),
+          upsert: true,
+        );
+    await _moveDocsOutOfPackage(name);
   }
 
   @override
   addUploader(name, email) async {
-    try {
-      await db.collection(packageCollection).update(_selectByName(name), modify.push('uploaders', email));
-    } catch (e) {
-      onDatabaseError?.call(e.toString());
-      return Future.error(e);
-    }
+    await db.collection(packageCollection).update(_selectByName(name), modify.push('uploaders', email));
   }
 
   @override
   removeUploader(name, email) async {
-    try {
-      await db.collection(packageCollection).update(_selectByName(name), modify.pull('uploaders', email));
-    } catch (e) {
-      onDatabaseError?.call(e.toString());
-      return Future.error(e);
-    }
+    await db.collection(packageCollection).update(_selectByName(name), modify.pull('uploaders', email));
   }
 
   @override
@@ -137,7 +111,6 @@ class MongoStore extends MetaStore {
       await db.collection(packageCollection).update(_selectByName(name), modify.inc('download', 1));
     } catch (e) {
       print('Failed to count the download of $name $version: $e');
-      onDatabaseError?.call(e.toString());
     }
   }
 
@@ -182,28 +155,23 @@ class MongoStore extends MetaStore {
     uploader,
     dependency,
   }) async {
-    try {
-      // Only the ids: a package document holds every version with its readme
-      // and changelog, and only their number is needed here.
-      final count = await db
-          .collection(packageCollection)
-          .find(_packagesMatching(keyword, uploader, dependency).fields(['_id']))
-          .length;
-      final packages = await db
-          .collection(packageCollection)
-          .find(
-            _withoutDocs(
-              _packagesMatching(keyword, uploader, dependency),
-            ).sortBy(sort, descending: true).limit(size).skip(page * size),
-          )
-          .map((item) => UnpubPackage.fromJson(item))
-          .toList();
+    // Only the ids: a package document holds every version with its readme
+    // and changelog, and only their number is needed here.
+    final count = await db
+        .collection(packageCollection)
+        .find(_packagesMatching(keyword, uploader, dependency).fields(['_id']))
+        .length;
+    final packages = await db
+        .collection(packageCollection)
+        .find(
+          _withoutDocs(
+            _packagesMatching(keyword, uploader, dependency),
+          ).sortBy(sort, descending: true).limit(size).skip(page * size),
+        )
+        .map((item) => UnpubPackage.fromJson(item))
+        .toList();
 
-      return UnpubQueryResult(count, packages);
-    } catch (e) {
-      onDatabaseError?.call(e.toString());
-      return Future.error(e);
-    }
+    return UnpubQueryResult(count, packages);
   }
 
   /// A new selector for every query: projecting, sorting and paging change
