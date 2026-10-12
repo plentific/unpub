@@ -1,7 +1,8 @@
 import 'package:unpub/src/models.dart';
 import 'package:unpub/src/version_docs.dart';
 
-abstract class MetaStore {
+/// Where package metadata is kept.
+abstract interface class MetaStore {
   /// The package without the readmes and changelogs of its versions.
   Future<UnpubPackage?> queryPackage(String name);
 

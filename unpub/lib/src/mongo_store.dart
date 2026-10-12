@@ -11,7 +11,7 @@ final packageCollection = 'packages';
 /// grow towards the 16 MB document limit, and every lookup read them.
 final docsCollection = 'version_docs';
 
-class MongoStore extends MetaStore {
+final class MongoStore implements MetaStore {
   Db db;
 
   MongoStore(this.db);
