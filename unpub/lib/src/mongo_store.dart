@@ -87,7 +87,13 @@ class MongoStore extends MetaStore {
               .set('updatedAt', version.createdAt),
           upsert: true,
         );
-    await _moveDocsOutOfPackage(name);
+    // The version is published by now, so this must not fail the publish.
+    // Moving is safe to repeat, and the package's next publish tries again.
+    try {
+      await _moveDocsOutOfPackage(name);
+    } catch (e) {
+      print('Could not move the docs of $name out of its document, its next publish tries again: $e');
+    }
   }
 
   @override
