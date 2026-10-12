@@ -5,10 +5,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     services:
-      # For the integration tests (tagged mongodb); production runs on a
-      # MongoDB 5 compatible Amazon DocumentDB.
+      # For the integration tests (tagged mongodb), at the MongoDB version
+      # whose API production's Amazon DocumentDB 5.0 implements.
       mongodb:
-        image: mongo:7.0
+        image: mongo:5.0
         ports:
           - 27017:27017
     steps:
