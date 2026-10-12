@@ -31,7 +31,7 @@ class UnpubVersion {
   Map<String, dynamic> toJson() => _$UnpubVersionToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(createToJson: false)
 class UnpubPackage {
   final String name;
   final List<UnpubVersion> versions;
@@ -46,20 +46,12 @@ class UnpubPackage {
 
   final int? download;
 
-  UnpubPackage(
-    this.name,
-    this.versions,
-    this.private,
-    this.uploaders,
-    this.createdAt,
-    this.updatedAt,
-    this.download,
-  );
+  UnpubPackage(this.name, this.versions, this.private, this.uploaders, this.createdAt, this.updatedAt, this.download);
 
   factory UnpubPackage.fromJson(Map<String, dynamic> map) => _$UnpubPackageFromJson(map);
 }
 
-@JsonSerializable()
+@JsonSerializable(createToJson: false)
 class UnpubQueryResult {
   int count;
   List<UnpubPackage> packages;

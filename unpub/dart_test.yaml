@@ -1,0 +1,3 @@
+tags:
+  mongodb:
+    description: Needs a MongoDB server on localhost:27017 (see unpub_aws/docker-compose.yml).

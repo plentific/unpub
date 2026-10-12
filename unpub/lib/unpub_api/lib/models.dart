@@ -21,11 +21,9 @@ class ListApiPackage {
   String latest;
   DateTime updatedAt;
 
-  ListApiPackage(
-      this.name, this.description, this.tags, this.latest, this.updatedAt);
+  ListApiPackage(this.name, this.description, this.tags, this.latest, this.updatedAt);
 
-  factory ListApiPackage.fromJson(Map<String, dynamic> map) =>
-      _$ListApiPackageFromJson(map);
+  factory ListApiPackage.fromJson(Map<String, dynamic> map) => _$ListApiPackageFromJson(map);
   Map<String, dynamic> toJson() => _$ListApiPackageToJson(this);
 }
 
@@ -36,8 +34,7 @@ class DetailViewVersion {
 
   DetailViewVersion(this.version, this.createdAt);
 
-  factory DetailViewVersion.fromJson(Map<String, dynamic> map) =>
-      _$DetailViewVersionFromJson(map);
+  factory DetailViewVersion.fromJson(Map<String, dynamic> map) => _$DetailViewVersionFromJson(map);
 
   Map<String, dynamic> toJson() => _$DetailViewVersionToJson(this);
 }
@@ -58,21 +55,21 @@ class WebapiDetailView {
   List<String> tags;
 
   WebapiDetailView(
-      this.name,
-      this.version,
-      this.description,
-      this.homepage,
-      this.uploaders,
-      this.createdAt,
-      this.readme,
-      this.changelog,
-      this.versions,
-      this.authors,
-      this.dependencies,
-      this.tags);
+    this.name,
+    this.version,
+    this.description,
+    this.homepage,
+    this.uploaders,
+    this.createdAt,
+    this.readme,
+    this.changelog,
+    this.versions,
+    this.authors,
+    this.dependencies,
+    this.tags,
+  );
 
-  factory WebapiDetailView.fromJson(Map<String, dynamic> map) =>
-      _$WebapiDetailViewFromJson(map);
+  factory WebapiDetailView.fromJson(Map<String, dynamic> map) => _$WebapiDetailViewFromJson(map);
 
   Map<String, dynamic> toJson() => _$WebapiDetailViewToJson(this);
 }

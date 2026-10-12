@@ -3,25 +3,17 @@ import 'package:http_multi_server/http_multi_server.dart';
 import 'package:path/path.dart' as path;
 
 class Utils {
-  static bool _verbose = false;
-  static void enableVerbose() => _verbose = true;
-  static bool _silence = false;
-  static void enableSilence() => _silence = true;
-
-  static final credentialsFilePath =
-      path.join(Utils.dartConfigDir, r'unpub-credentials.json');
+  static final credentialsFilePath = path.join(Utils.dartConfigDir, r'unpub-credentials.json');
 
   /// The location for dart-specific configuration.
   static final String dartConfigDir = () {
     String? configDir;
     if (Platform.isLinux) {
-      configDir = Platform.environment['XDG_CONFIG_HOME'] ??
-          path.join(Platform.environment['HOME']!, '.config');
+      configDir = Platform.environment['XDG_CONFIG_HOME'] ?? path.join(Platform.environment['HOME']!, '.config');
     } else if (Platform.isWindows) {
       configDir = Platform.environment['APPDATA']!;
     } else if (Platform.isMacOS) {
-      configDir = path.join(
-          Platform.environment['HOME']!, 'Library', 'Application Support');
+      configDir = path.join(Platform.environment['HOME']!, 'Library', 'Application Support');
     } else {
       configDir = path.join(Platform.environment['HOME'] ?? '', '.config');
     }
@@ -31,9 +23,7 @@ class Utils {
   }();
 
   static Future<HttpServer> bindServer(String host, int port) async {
-    var server = host == 'localhost'
-        ? await HttpMultiServer.loopback(port)
-        : await HttpServer.bind(host, port);
+    var server = host == 'localhost' ? await HttpMultiServer.loopback(port) : await HttpServer.bind(host, port);
     server.autoCompress = true;
     return server;
   }
@@ -50,18 +40,14 @@ class Utils {
     return map;
   }
 
-  static String _urlDecode(String encoded) =>
-      Uri.decodeComponent(encoded.replaceAll('+', ' '));
+  static String _urlDecode(String encoded) => Uri.decodeComponent(encoded.replaceAll('+', ' '));
 
   static List<String> _split(String toSplit, String pattern) {
     if (toSplit.isEmpty) return <String>[];
 
     var index = toSplit.indexOf(pattern);
     if (index == -1) return [toSplit];
-    return [
-      toSplit.substring(0, index),
-      toSplit.substring(index + pattern.length)
-    ];
+    return [toSplit.substring(0, index), toSplit.substring(index + pattern.length)];
   }
 
   static void stdoutPrint(Object? object) => stdout.write(object);

@@ -1,3 +1,7 @@
+// Needs a MongoDB server on localhost:27017.
+@Tags(['mongodb'])
+library;
+
 import 'dart:io';
 import 'dart:convert';
 import 'package:collection/collection.dart';
@@ -18,16 +22,20 @@ main() {
   });
 
   Future<Map<String, dynamic>> _readMeta(String name) async {
-    var res =
-        await _db.collection(packageCollection).findOne(where.eq('name', name));
+    var res = await _db.collection(packageCollection).findOne(where.eq('name', name));
     res!.remove('_id'); // TODO: null
+    return res;
+  }
+
+  Future<Map<String, dynamic>?> _readDocs(String name, String version) async {
+    var res = await _db.collection(docsCollection).findOne(where.eq('name', name).eq('version', version));
+    res?.remove('_id');
     return res;
   }
 
   Map<String, String> _pubspecCache = {};
 
-  Future<String?> _readFile(
-      String package, String version, String filename) async {
+  Future<String?> _readFile(String package, String version, String filename) async {
     var key = package + version + filename;
     if (_pubspecCache[key] == null) {
       var filePath = path.absolute('test/fixtures', package, version, filename);
@@ -38,7 +46,7 @@ main() {
 
   _cleanUpDb() async {
     await _db.dropCollection(packageCollection);
-    await _db.dropCollection(statsCollection);
+    await _db.dropCollection(docsCollection);
   }
 
   tearDownAll(() async {
@@ -77,12 +85,18 @@ main() {
       expect(
         DeepCollectionEquality().equals(item, {
           'version': version,
+          'pubspec': loadYamlAsMap(await _readFile(package0, version, 'pubspec.yaml')),
+          'uploader': email0,
+        }),
+        true,
+      );
+      expect(
+        DeepCollectionEquality().equals(await _readDocs(package0, version), {
+          'name': package0,
+          'version': version,
           'pubspecYaml': await _readFile(package0, version, 'pubspec.yaml'),
-          'pubspec':
-              loadYamlAsMap(await _readFile(package0, version, 'pubspec.yaml')),
           'readme': await _readFile(package0, version, 'README.md'),
           'changelog': await _readFile(package0, version, 'CHANGELOG.md'),
-          'uploader': email0,
         }),
         true,
       );
@@ -111,8 +125,8 @@ main() {
 
     test('no readme and changelog', () async {
       var version = '1.0.0-noreadme';
-      var result = await pubPublish(package0, version);
-      // expect(result.stderr, ''); // Suggestions:
+      // Not checking stderr: pub prints suggestions for a package without a readme.
+      await pubPublish(package0, version);
 
       var meta = await _readMeta(package0);
 
@@ -129,13 +143,98 @@ main() {
       expect(
         DeepCollectionEquality().equals(item, {
           'version': version,
-          'pubspecYaml': await _readFile(package0, version, 'pubspec.yaml'),
-          'pubspec':
-              loadYamlAsMap(await _readFile(package0, version, 'pubspec.yaml')),
+          'pubspec': loadYamlAsMap(await _readFile(package0, version, 'pubspec.yaml')),
           'uploader': email0,
         }),
         true,
       );
+      expect(
+        DeepCollectionEquality().equals(await _readDocs(package0, version), {
+          'name': package0,
+          'version': version,
+          'pubspecYaml': await _readFile(package0, version, 'pubspec.yaml'),
+          'readme': null,
+          'changelog': null,
+        }),
+        true,
+      );
+    });
+  });
+
+  group('version docs', () {
+    setUpAll(() async {
+      await _cleanUpDb();
+      _server = await createServer(email0);
+      // A package published before the docs moved out of package documents.
+      await _db.collection(packageCollection).insertOne({
+        'name': package0,
+        'versions': [
+          {
+            'version': '0.0.1',
+            'pubspec': loadYamlAsMap(await _readFile(package0, '0.0.1', 'pubspec.yaml')),
+            'pubspecYaml': await _readFile(package0, '0.0.1', 'pubspec.yaml'),
+            'uploader': email0,
+            'readme': 'legacy readme',
+            'changelog': 'legacy changelog',
+            'createdAt': DateTime.utc(2025, 1, 1),
+          },
+        ],
+        'uploaders': [email0],
+        'private': true,
+        'download': 0,
+        'createdAt': DateTime.utc(2025, 1, 1),
+        'updatedAt': DateTime.utc(2025, 1, 1),
+      });
+    });
+
+    tearDownAll(() async {
+      await _server.close();
+    });
+
+    Future<Map<String, dynamic>> readPage(String version) async {
+      var res = await http.get(baseUri.resolve('/webapi/package/$package0/$version'));
+      return json.decode(res.body)['data'] as Map<String, dynamic>;
+    }
+
+    test('are read from the package document until it is published again', () async {
+      var page = await readPage('0.0.1');
+
+      expect(page['readme'], 'legacy readme');
+      expect(page['changelog'], 'legacy changelog');
+    });
+
+    test('move out of the package document on its next publish', () async {
+      var result = await pubPublish(package0, '0.0.2');
+      expect(result.stderr, '');
+
+      var meta = await _readMeta(package0);
+      for (var version in meta['versions'] as List) {
+        expect(version, isNot(contains('readme')));
+        expect(version, isNot(contains('changelog')));
+        expect(version, isNot(contains('pubspecYaml')));
+      }
+      expect((await _readDocs(package0, '0.0.1'))!['readme'], 'legacy readme');
+      expect((await readPage('0.0.1'))['readme'], 'legacy readme');
+      expect((await readPage('0.0.2'))['readme'], await _readFile(package0, '0.0.2', 'README.md'));
+    });
+  });
+
+  group('indexes', () {
+    setUpAll(() async {
+      await _cleanUpDb();
+      _server = await createServer(email0);
+    });
+
+    tearDownAll(() async {
+      await _server.close();
+    });
+
+    test('keep one document per package name', () async {
+      await pubPublish(package0, '0.0.1');
+
+      var duplicate = await _db.collection(packageCollection).insertOne({'name': package0});
+
+      expect(duplicate.isSuccess, isFalse);
     });
   });
 
@@ -160,40 +259,30 @@ main() {
         DeepCollectionEquality().equals(body, {
           "name": "package_0",
           "latest": {
-            "archive_url":
-                "$pubHostedUrl/packages/package_0/versions/0.0.2.tar.gz",
-            "pubspec": loadYamlAsMap(
-                await _readFile('package_0', '0.0.2', 'pubspec.yaml')),
-            "version": "0.0.2"
+            "archive_url": "$pubHostedUrl/packages/package_0/versions/0.0.2.tar.gz",
+            "pubspec": loadYamlAsMap(await _readFile('package_0', '0.0.2', 'pubspec.yaml')),
+            "version": "0.0.2",
           },
           "versions": [
             {
-              "archive_url":
-                  "$pubHostedUrl/packages/package_0/versions/0.0.1.tar.gz",
-              "pubspec": loadYamlAsMap(
-                  await _readFile('package_0', '0.0.1', 'pubspec.yaml')),
-              "version": "0.0.1"
+              "archive_url": "$pubHostedUrl/packages/package_0/versions/0.0.1.tar.gz",
+              "pubspec": loadYamlAsMap(await _readFile('package_0', '0.0.1', 'pubspec.yaml')),
+              "version": "0.0.1",
             },
             {
-              "archive_url":
-                  "$pubHostedUrl/packages/package_0/versions/0.0.2.tar.gz",
-              "pubspec": loadYamlAsMap(
-                  await _readFile('package_0', '0.0.2', 'pubspec.yaml')),
-              "version": "0.0.2"
-            }
-          ]
+              "archive_url": "$pubHostedUrl/packages/package_0/versions/0.0.2.tar.gz",
+              "pubspec": loadYamlAsMap(await _readFile('package_0', '0.0.2', 'pubspec.yaml')),
+              "version": "0.0.2",
+            },
+          ],
         }),
         true,
       );
     });
 
-    test('existing at remote', () async {
-      var name = 'http';
-      var res = await getVersions(name);
-      expect(res.statusCode, HttpStatus.ok);
-
-      var body = json.decode(res.body);
-      expect(body['name'], name);
+    test('only on pub.dev', () async {
+      var res = await getVersions('http');
+      expect(res.statusCode, HttpStatus.notFound);
     });
 
     test('not existing', () async {
@@ -221,11 +310,9 @@ main() {
       var body = json.decode(res.body);
       expect(
         DeepCollectionEquality().equals(body, {
-          "archive_url":
-              "$pubHostedUrl/packages/package_0/versions/0.0.1.tar.gz",
-          "pubspec": loadYamlAsMap(
-              await _readFile('package_0', '0.0.1', 'pubspec.yaml')),
-          "version": '0.0.1'
+          "archive_url": "$pubHostedUrl/packages/package_0/versions/0.0.1.tar.gz",
+          "pubspec": loadYamlAsMap(await _readFile('package_0', '0.0.1', 'pubspec.yaml')),
+          "version": '0.0.1',
         }),
         true,
       );
@@ -238,11 +325,9 @@ main() {
       var body = json.decode(res.body);
       expect(
         DeepCollectionEquality().equals(body, {
-          "archive_url":
-              "$pubHostedUrl/packages/package_0/versions/0.0.3+1.tar.gz",
-          "pubspec": loadYamlAsMap(
-              await _readFile('package_0', '0.0.3+1', 'pubspec.yaml')),
-          "version": '0.0.3+1'
+          "archive_url": "$pubHostedUrl/packages/package_0/versions/0.0.3+1.tar.gz",
+          "pubspec": loadYamlAsMap(await _readFile('package_0', '0.0.3+1', 'pubspec.yaml')),
+          "version": '0.0.3+1',
         }),
         true,
       );
@@ -253,12 +338,9 @@ main() {
       expect(res.statusCode, HttpStatus.notFound);
     });
 
-    test('existing at remote', () async {
+    test('only on pub.dev', () async {
       var res = await getSpecificVersion('http', '0.12.0+2');
-      expect(res.statusCode, HttpStatus.ok);
-
-      var body = json.decode(res.body);
-      expect(body['version'], '0.12.0+2');
+      expect(res.statusCode, HttpStatus.notFound);
     });
 
     test('not existing', () async {
@@ -280,22 +362,22 @@ main() {
 
     group('add', () {
       test('already exists', () async {
-        var result = await pubUploader(package0, 'add', email0);
-        expect(result.stderr, contains('email already exists'));
+        var response = await changeUploader(package0, 'add', email0);
+        expect(response.body, contains('email already exists'));
 
         var meta = await _readMeta(package0);
         expect(meta['uploaders'], unorderedEquals([email0]));
       });
 
       test('success', () async {
-        var result = await pubUploader(package0, 'add', email1);
-        expect(result.stderr, '');
+        var response = await changeUploader(package0, 'add', email1);
+        expect(response.statusCode, HttpStatus.ok);
 
         var meta = await _readMeta(package0);
         expect(meta['uploaders'], unorderedEquals([email0, email1]));
 
-        result = await pubUploader(package0, 'add', email2);
-        expect(result.stderr, '');
+        response = await changeUploader(package0, 'add', email2);
+        expect(response.statusCode, HttpStatus.ok);
 
         meta = await _readMeta(package0);
         expect(meta['uploaders'], unorderedEquals([email0, email1, email2]));
@@ -304,22 +386,22 @@ main() {
 
     group('remove', () {
       test('not in uploader', () async {
-        var result = await pubUploader(package0, 'remove', email3);
-        expect(result.stderr, contains('email not uploader'));
+        var response = await changeUploader(package0, 'remove', email3);
+        expect(response.body, contains('email not uploader'));
 
         var meta = await _readMeta(package0);
         expect(meta['uploaders'], unorderedEquals([email0, email1, email2]));
       });
 
       test('success', () async {
-        var result = await pubUploader(package0, 'remove', email2);
-        expect(result.stderr, '');
+        var response = await changeUploader(package0, 'remove', email2);
+        expect(response.statusCode, HttpStatus.ok);
 
         var meta = await _readMeta(package0);
         expect(meta['uploaders'], unorderedEquals([email0, email1]));
 
-        result = await pubUploader(package0, 'remove', email1);
-        expect(result.stderr, '');
+        response = await changeUploader(package0, 'remove', email1);
+        expect(response.statusCode, HttpStatus.ok);
 
         meta = await _readMeta(package0);
         expect(meta['uploaders'], unorderedEquals([email0]));
@@ -337,13 +419,15 @@ main() {
       });
 
       test('add', () async {
-        var result = await pubUploader(package0, 'add', email0);
-        expect(result.stderr, contains('no permission'));
+        var response = await changeUploader(package0, 'add', email0);
+        expect(response.statusCode, HttpStatus.forbidden);
+        expect(response.body, contains('no permission'));
       });
 
       test('remove', () async {
-        var result = await pubUploader(package0, 'remove', email0);
-        expect(result.stderr, contains('no permission'));
+        var response = await changeUploader(package0, 'remove', email0);
+        expect(response.statusCode, HttpStatus.forbidden);
+        expect(response.body, contains('no permission'));
       });
     });
   });
@@ -362,27 +446,30 @@ main() {
     group('v', () {
       test('<1.0.0', () async {
         var res = await http.Client().send(
-            http.Request('GET', baseUri.resolve('/badge/v/$package0'))
-              ..followRedirects = false);
+          http.Request('GET', baseUri.resolve('/badge/v/$package0'))..followRedirects = false,
+        );
         expect(res.statusCode, HttpStatus.found);
-        expect(res.headers[HttpHeaders.locationHeader],
-            'https://img.shields.io/static/v1?label=unpub&message=0.0.1&color=orange');
+        expect(
+          res.headers[HttpHeaders.locationHeader],
+          'https://img.shields.io/static/v1?label=unpub&message=0.0.1&color=orange',
+        );
       });
 
       test('>=1.0.0', () async {
         await pubPublish(package0, '1.0.0');
 
         var res = await http.Client().send(
-            http.Request('GET', baseUri.resolve('/badge/v/$package0'))
-              ..followRedirects = false);
+          http.Request('GET', baseUri.resolve('/badge/v/$package0'))..followRedirects = false,
+        );
         expect(res.statusCode, HttpStatus.found);
-        expect(res.headers[HttpHeaders.locationHeader],
-            'https://img.shields.io/static/v1?label=unpub&message=1.0.0&color=blue');
+        expect(
+          res.headers[HttpHeaders.locationHeader],
+          'https://img.shields.io/static/v1?label=unpub&message=1.0.0&color=blue',
+        );
       });
 
       test('package not exists', () async {
-        var res =
-            await http.get(baseUri.resolve('/badge/v/$notExistingPacakge'));
+        var res = await http.get(baseUri.resolve('/badge/v/$notExistingPacakge'));
         expect(res.statusCode, HttpStatus.notFound);
       });
     });
@@ -390,16 +477,17 @@ main() {
     group('d', () {
       test('correct download count', () async {
         var res = await http.Client().send(
-            http.Request('GET', baseUri.resolve('/badge/d/$package0'))
-              ..followRedirects = false);
+          http.Request('GET', baseUri.resolve('/badge/d/$package0'))..followRedirects = false,
+        );
         expect(res.statusCode, HttpStatus.found);
-        expect(res.headers[HttpHeaders.locationHeader],
-            'https://img.shields.io/static/v1?label=downloads&message=0&color=blue');
+        expect(
+          res.headers[HttpHeaders.locationHeader],
+          'https://img.shields.io/static/v1?label=downloads&message=0&color=blue',
+        );
       });
 
       test('package not exists', () async {
-        var res =
-            await http.get(baseUri.resolve('/badge/d/$notExistingPacakge'));
+        var res = await http.get(baseUri.resolve('/badge/d/$notExistingPacakge'));
         expect(res.statusCode, HttpStatus.notFound);
       });
     });
