@@ -1,27 +1,26 @@
 import 'dart:io';
+
 import 'package:path/path.dart' as path;
-import 'package_store.dart';
+import 'package:unpub/src/package_store.dart';
 
-class FileStore extends PackageStore {
-  String baseDir;
-  String Function(String name, String version)? getFilePath;
+/// Keeps package archives as files in a directory.
+final class FileStore implements PackageStore {
+  final String _directory;
 
-  FileStore(this.baseDir, {this.getFilePath});
-
-  File _getTarballFile(String name, String version) {
-    final filePath = getFilePath?.call(name, version) ?? '$name-$version.tar.gz';
-    return File(path.join(baseDir, filePath));
-  }
+  FileStore(this._directory);
 
   @override
   Future<void> upload(String name, String version, List<int> content) async {
-    var file = _getTarballFile(name, version);
+    final file = _archive(name, version);
     await file.create(recursive: true);
     await file.writeAsBytes(content);
   }
 
   @override
-  Stream<List<int>> download(String name, String version) {
-    return _getTarballFile(name, version).openRead();
+  Future<StoredArchive> download(String name, String version) async {
+    final file = _archive(name, version);
+    return await file.exists() ? ArchiveFound(file.openRead()) : const ArchiveMissing();
   }
+
+  File _archive(String name, String version) => File(path.join(_directory, '$name-$version.tar.gz'));
 }

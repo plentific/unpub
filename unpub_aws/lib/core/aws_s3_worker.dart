@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:aws_common/aws_common.dart';
 import 'package:aws_signature_v4/aws_signature_v4.dart';
+import 'package:unpub/unpub.dart';
 import 'package:unpub_aws/core/aws_credentials.dart';
 
 /// Reads and writes package archives in an S3 bucket.
@@ -39,23 +40,29 @@ final class AwsS3Worker {
     }
   }
 
-  Stream<List<int>> download({
+  /// Asks S3 for an archive and waits for its answer, so that a refusal or a
+  /// missing object is known before anything is sent to the client. S3
+  /// answers 403 rather than 404 for a missing object when the role may not
+  /// list the bucket, which counts as unavailable here.
+  Future<StoredArchive> download({
     required String name,
     required String version,
     required AwsCredentials credentials,
-  }) async* {
-    final request = AWSStreamedHttpRequest.get(_objectUri(name, version));
-    final signedRequest = await _signRequest(credentials: credentials, request: request);
-    final response = await signedRequest.send(client: _http).response;
-    // Without this check an S3 error (e.g. 403 for expired credentials) is
-    // served to `dart pub` as the package archive.
-    if (response.statusCode != HttpStatus.ok) {
-      throw Exception(
-        'S3 file download error. Status code ${response.statusCode}. \n'
-        '${utf8.decode(await response.bodyBytes, allowMalformed: true)}',
-      );
+  }) async {
+    try {
+      final request = AWSStreamedHttpRequest.get(_objectUri(name, version));
+      final signedRequest = await _signRequest(credentials: credentials, request: request);
+      final response = await signedRequest.send(client: _http).response;
+      return switch (response.statusCode) {
+        HttpStatus.ok => ArchiveFound(response.body),
+        HttpStatus.notFound => const ArchiveMissing(),
+        final status => ArchiveUnavailable(
+          'S3 answered $status: ${utf8.decode(await response.bodyBytes, allowMalformed: true)}',
+        ),
+      };
+    } catch (e) {
+      return ArchiveUnavailable('$e');
     }
-    yield* response.body;
   }
 
   Future<AWSSignedRequest> _signRequest({

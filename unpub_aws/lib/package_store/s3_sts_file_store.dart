@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:unpub/unpub.dart';
 import 'package:unpub_aws/core/aws_s3_worker.dart';
 import 'package:unpub_aws/core/refreshing_credentials.dart';
@@ -13,18 +11,11 @@ final class S3StoreIamStore implements PackageStore {
   S3StoreIamStore({required this._s3, required this._credentials});
 
   @override
-  bool supportsDownloadUrl = false;
-
-  @override
-  FutureOr<String> downloadUrl(String name, String version) =>
-      throw UnsupportedError('S3StoreIamStore serves package archives through download');
-
-  @override
   Future<void> upload(String name, String version, List<int> content) async {
     await _s3.upload(name: name, version: version, content: content, credentials: _credentials.current);
   }
 
   @override
-  Stream<List<int>> download(String name, String version) =>
+  Future<StoredArchive> download(String name, String version) =>
       _s3.download(name: name, version: version, credentials: _credentials.current);
 }

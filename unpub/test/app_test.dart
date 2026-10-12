@@ -248,6 +248,42 @@ main() {
     expect(metaStore.downloads, isEmpty);
   });
 
+  test('answers 404 for a version whose archive the store does not have', () async {
+    final directory = await Directory.systemTemp.createTemp('unpub_app');
+    addTearDown(() => directory.delete(recursive: true));
+    final metaStore = MemoryMetaStore();
+    await metaStore.addVersion('acme_ui', _version('acme_ui', '1.0.0'));
+    final app = unpub.App(metaStore: metaStore, packageStore: unpub.FileStore(directory.path));
+
+    final response = await app.router.call(
+      shelf.Request(
+        'GET',
+        Uri.parse('http://localhost/packages/acme_ui/versions/1.0.0.tar.gz'),
+        headers: {'user-agent': 'Dart pub 3.12.2'},
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.notFound);
+    expect(metaStore.downloads, isEmpty);
+  });
+
+  test('answers 502 when the package store does not give the archive', () async {
+    final metaStore = MemoryMetaStore();
+    await metaStore.addVersion('acme_ui', _version('acme_ui', '1.0.0'));
+    final app = unpub.App(metaStore: metaStore, packageStore: _UnavailableStore());
+
+    final response = await app.router.call(
+      shelf.Request(
+        'GET',
+        Uri.parse('http://localhost/packages/acme_ui/versions/1.0.0.tar.gz'),
+        headers: {'user-agent': 'Dart pub 3.12.2'},
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.badGateway);
+    expect(metaStore.downloads, isEmpty);
+  });
+
   test('redirects a package it does not have to the upstream server when asked to', () async {
     final app = unpub.App(
       metaStore: MemoryMetaStore(),
@@ -302,4 +338,25 @@ main() {
 
     expect(added.statusCode, HttpStatus.badRequest);
   });
+}
+
+/// A version of [name] with nothing but its pubspec.
+unpub.UnpubVersion _version(String name, String version) => unpub.UnpubVersion(
+  version,
+  {'name': name, 'version': version},
+  null,
+  'publisher@example.com',
+  null,
+  null,
+  DateTime.utc(2026, 1, 2),
+);
+
+/// A package store that cannot give any archive, as when S3 refuses.
+final class _UnavailableStore implements unpub.PackageStore {
+  @override
+  Future<unpub.StoredArchive> download(String name, String version) async =>
+      const unpub.ArchiveUnavailable('S3 answered 403: AccessDenied');
+
+  @override
+  Future<void> upload(String name, String version, List<int> content) => throw UnimplementedError();
 }

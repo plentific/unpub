@@ -245,17 +245,18 @@ class App {
       return shelf.Response.notFound('Not Found');
     }
 
-    if (isPubClient(req)) {
-      metaStore.increaseDownloads(name, packageVersion.version);
-    }
-
-    if (packageStore.supportsDownloadUrl) {
-      return shelf.Response.found(await packageStore.downloadUrl(name, packageVersion.version));
-    } else {
-      return shelf.Response.ok(
-        packageStore.download(name, packageVersion.version),
-        headers: {HttpHeaders.contentTypeHeader: ContentType.binary.mimeType},
-      );
+    switch (await packageStore.download(name, packageVersion.version)) {
+      case ArchiveFound(:final bytes):
+        if (isPubClient(req)) {
+          metaStore.increaseDownloads(name, packageVersion.version);
+        }
+        return shelf.Response.ok(bytes, headers: {HttpHeaders.contentTypeHeader: ContentType.binary.mimeType});
+      case ArchiveMissing():
+        print('The package store has no archive of $name ${packageVersion.version}');
+        return shelf.Response.notFound('Not Found');
+      case ArchiveUnavailable(:final reason):
+        print('Could not get the archive of $name ${packageVersion.version}: $reason');
+        return shelf.Response(HttpStatus.badGateway, body: 'The package store did not give the archive');
     }
   }
 

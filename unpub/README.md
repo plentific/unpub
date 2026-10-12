@@ -139,13 +139,14 @@ Unpub is designed to be extensible. It is quite easy to customize your own meta 
 ```dart
 import 'package:unpub/unpub.dart' as unpub;
 
-class MyAwesomeMetaStore extends unpub.MetaStore {
-  // Implement methods of MetaStore abstract class
+class MyAwesomeMetaStore implements unpub.MetaStore {
+  // Implement the methods of the MetaStore interface
   // ...
 }
 
-class MyAwesomePackageStore extends unpub.PackageStore {
-  // Implement methods of PackageStore abstract class
+class MyAwesomePackageStore implements unpub.PackageStore {
+  // download answers with an unpub.StoredArchive: ArchiveFound with the
+  // bytes, ArchiveMissing, or ArchiveUnavailable when the store failed
   // ...
 }
 
