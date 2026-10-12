@@ -39,7 +39,7 @@ Router _$AppRouter(App service) {
     r'/webapi/package/<name>/<version>',
     service.getPackageDetail,
   );
-  router.add('GET', r'/', service.packageListPage);
+  router.add('GET', r'/', service.home);
   router.add('GET', r'/packages', service.packageListPage);
   router.add('GET', r'/packages/<name>', service.packagePage);
   router.add(

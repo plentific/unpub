@@ -543,7 +543,12 @@ class App {
     return _okWithJson({'data': data.toJson()});
   }
 
+  /// Sends browsers on to the package list without asking the database, as
+  /// the old static page did, so health checks and monitors that request `/`
+  /// stay quick and don't depend on it.
   @Route.get('/')
+  shelf.Response home(shelf.Request req) => shelf.Response.found(_resolveUrl(req, '/packages'));
+
   @Route.get('/packages')
   Future<shelf.Response> packageListPage(shelf.Request req) async {
     const pageSize = 10;

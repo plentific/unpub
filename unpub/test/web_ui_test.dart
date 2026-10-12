@@ -37,7 +37,7 @@ void main() {
     }
     final browser = _Browser(unpub.App(metaStore: metaStore, packageStore: unpub.FileStore(Directory.systemTemp.path)));
 
-    final response = await browser.open('/');
+    final response = await browser.open('/packages');
     final page = await response.readAsString();
 
     expect(response.statusCode, HttpStatus.ok);
@@ -228,7 +228,7 @@ void main() {
     }
     final browser = _Browser(unpub.App(metaStore: metaStore, packageStore: unpub.FileStore(Directory.systemTemp.path)));
 
-    final list = await browser.open('/');
+    final list = await browser.open('/packages');
     final versions = await browser.read('/packages/acme_ui?tab=versions');
 
     expect(list.statusCode, HttpStatus.ok);
@@ -263,4 +263,48 @@ void main() {
     expect(response.statusCode, HttpStatus.ok);
     expect(await response.readAsString(), contains('hosted: ftp://mirror.example.com'));
   });
+
+  test('sends / on to the package list without asking the database', () async {
+    final browser = _Browser(
+      unpub.App(metaStore: _UnreachableMetaStore(), packageStore: unpub.FileStore(Directory.systemTemp.path)),
+    );
+
+    final response = await browser.open('/');
+
+    expect(response.statusCode, HttpStatus.found);
+    expect(response.headers['location'], 'http://localhost/packages');
+  });
+}
+
+/// A metadata store whose database cannot be reached.
+final class _UnreachableMetaStore implements unpub.MetaStore {
+  @override
+  Future<unpub.UnpubPackage?> queryPackage(String name) => _unreachable();
+
+  @override
+  Future<unpub.VersionDocs> queryVersionDocs(String name, String version) => _unreachable();
+
+  @override
+  Future<void> addVersion(String name, unpub.UnpubVersion version) => _unreachable();
+
+  @override
+  Future<void> addUploader(String name, String email) => _unreachable();
+
+  @override
+  Future<void> removeUploader(String name, String email) => _unreachable();
+
+  @override
+  void increaseDownloads(String name, String version) => _unreachable();
+
+  @override
+  Future<unpub.UnpubQueryResult> queryPackages({
+    required int size,
+    required int page,
+    required String sort,
+    String? keyword,
+    String? uploader,
+    String? dependency,
+  }) => _unreachable();
+
+  Never _unreachable() => throw StateError('The database cannot be reached');
 }
