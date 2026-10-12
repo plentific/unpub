@@ -5,6 +5,7 @@ export 'src/mongo_store.dart';
 export 'src/reconnecting_meta_store.dart';
 export 'src/package_store.dart';
 export 'src/file_store.dart';
+export 'src/gunzip.dart';
 export 'src/app.dart';
 export 'src/models.dart';
 export 'src/version_docs.dart';

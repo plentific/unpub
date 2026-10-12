@@ -16,6 +16,7 @@ import 'package:archive/archive.dart';
 import 'package:unpub/src/models.dart';
 import 'package:unpub/unpub_api/lib/models.dart';
 import 'package:unpub/src/meta_store.dart';
+import 'package:unpub/src/gunzip.dart';
 import 'package:unpub/src/missing_packages.dart';
 import 'package:unpub/src/package_store.dart';
 import 'utils.dart';
@@ -39,8 +40,9 @@ class App {
   /// Largest upload accepted, in bytes. pub.dev allows 100 MB archives.
   final int maxArchiveBytes;
 
-  /// Largest size an uploaded archive may unpack to, in bytes.
-  final int maxUnpackedBytes;
+  /// Unpacks uploaded archives, refusing those that unpack to more than its
+  /// limit.
+  final BoundedGunzip unpacker;
 
   /// Renders the web UI.
   final WebPages webPages;
@@ -62,7 +64,7 @@ class App {
     required this.packageStore,
     this.missingPackages = const RejectMissingPackages(),
     this.maxArchiveBytes = 100 * 1024 * 1024,
-    this.maxUnpackedBytes = 256 * 1024 * 1024,
+    this.unpacker = const BoundedGunzip(limit: 256 * 1024 * 1024),
     this.webPages = const WebPages(markdown: MarkdownRenderer()),
     this.googleapisProxy,
     this.overrideUploaderEmail,
@@ -103,14 +105,6 @@ class App {
       }
       yield chunk;
     }
-  }
-
-  Future<Uint8List> _bytesOf(Stream<List<int>> stream) async {
-    final bytes = BytesBuilder(copy: false);
-    await for (final chunk in stream) {
-      bytes.add(chunk);
-    }
-    return bytes.takeBytes();
   }
 
   /// The emails in an author entry ("Name <email>"), or the entry itself
@@ -295,9 +289,10 @@ class App {
 
       var bb = await fileData!.fold(BytesBuilder(), (BytesBuilder byteBuilder, d) => byteBuilder..add(d));
       var tarballBytes = bb.takeBytes();
-      var tarBytes = await _bytesOf(
-        _limited(Stream<List<int>>.value(tarballBytes).transform(gzip.decoder), maxUnpackedBytes, 'unpacked package'),
-      );
+      var tarBytes = switch (unpacker.unpack(tarballBytes)) {
+        GunzippedBytes(:final bytes) => bytes,
+        GunzippedTooLarge(:final limit) => throw 'unpacked package is larger than ${limit ~/ (1024 * 1024)} MB',
+      };
       var archive = TarDecoder().decodeBytes(tarBytes);
       ArchiveFile? pubspecArchiveFile;
       ArchiveFile? readmeFile;

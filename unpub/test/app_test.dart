@@ -157,7 +157,7 @@ main() {
         metaStore: metaStore,
         packageStore: unpub.FileStore(directory.path),
         overrideUploaderEmail: 'publisher@example.com',
-        maxUnpackedBytes: 64 * 1024,
+        unpacker: const unpub.BoundedGunzip(limit: 64 * 1024),
       ),
     );
     // A megabyte of zeros packs into about a kilobyte.
