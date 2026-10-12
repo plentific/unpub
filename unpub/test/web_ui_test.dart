@@ -209,4 +209,30 @@ void main() {
     expect(search, contains('>package_24</a>'));
     expect(search, isNot(contains('>package_10</a>')));
   });
+
+  test('keeps the pages up when a stored version is not semantic', () async {
+    final metaStore = MemoryMetaStore();
+    for (final version in ['1.0.0', 'not-a-version']) {
+      await metaStore.addVersion(
+        'acme_ui',
+        unpub.UnpubVersion(
+          version,
+          {'name': 'acme_ui', 'version': version},
+          null,
+          'publisher@example.com',
+          null,
+          null,
+          DateTime.utc(2026, 1, 2),
+        ),
+      );
+    }
+    final browser = _Browser(unpub.App(metaStore: metaStore, packageStore: unpub.FileStore(Directory.systemTemp.path)));
+
+    final list = await browser.open('/');
+    final versions = await browser.read('/packages/acme_ui?tab=versions');
+
+    expect(list.statusCode, HttpStatus.ok);
+    expect(await list.readAsString(), contains('<span class="version">1.0.0</span>'));
+    expect(versions.indexOf('>1.0.0</a>'), lessThan(versions.indexOf('>not-a-version</a>')));
+  });
 }

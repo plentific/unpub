@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:math' show max, min;
 
-import 'package:pub_semver/pub_semver.dart' as semver;
 import 'package:unpub/src/models.dart';
 import 'package:unpub/src/utils.dart';
 import 'package:unpub/src/version_docs.dart';
@@ -124,7 +123,11 @@ final class WebPages {
   String _versionNotice(String name, {required UnpubVersion version, required UnpubVersion latest}) {
     if (version.version == latest.version) return '';
     final link = '<a href="${_attr(_packagePath(name))}">${_text(latest.version)}</a>';
-    return semver.Version.parse(version.version) > semver.Version.parse(latest.version)
+    final isNewer = switch ((parseVersion(version.version), parseVersion(latest.version))) {
+      (final shown?, final newest?) => shown > newest,
+      _ => false,
+    };
+    return isNewer
         ? '<p class="notice">This is a pre-release. The latest stable version is $link.</p>'
         : '<p class="notice">This is an older version. The latest is $link.</p>';
   }
@@ -142,7 +145,15 @@ final class WebPages {
 
   String _versionsTable(UnpubPackage package) {
     final versions = List.of(package.versions);
-    versions.sort((a, b) => semver.Version.parse(b.version).compareTo(semver.Version.parse(a.version)));
+    // Newest first; a version that is not semantic goes last.
+    versions.sort(
+      (a, b) => switch ((parseVersion(a.version), parseVersion(b.version))) {
+        (final first?, final second?) => second.compareTo(first),
+        (null, null) => 0,
+        (null, _) => 1,
+        (_, null) => -1,
+      },
+    );
     final rows = [
       for (final version in versions)
         '<tr>'
