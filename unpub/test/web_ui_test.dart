@@ -235,4 +235,32 @@ void main() {
     expect(await list.readAsString(), contains('<span class="version">1.0.0</span>'));
     expect(versions.indexOf('>1.0.0</a>'), lessThan(versions.indexOf('>not-a-version</a>')));
   });
+
+  test('shows the dependency snippet whatever scheme a proxy-origin header gives', () async {
+    final metaStore = MemoryMetaStore();
+    await metaStore.addVersion(
+      'acme_ui',
+      unpub.UnpubVersion(
+        '1.0.0',
+        {'name': 'acme_ui', 'version': '1.0.0'},
+        null,
+        'publisher@example.com',
+        null,
+        null,
+        DateTime.utc(2026, 1, 2),
+      ),
+    );
+    final app = unpub.App(metaStore: metaStore, packageStore: unpub.FileStore(Directory.systemTemp.path));
+
+    final response = await app.router.call(
+      shelf.Request(
+        'GET',
+        Uri.parse('http://localhost/packages/acme_ui'),
+        headers: {'proxy-origin': 'ftp://mirror.example.com'},
+      ),
+    );
+
+    expect(response.statusCode, HttpStatus.ok);
+    expect(await response.readAsString(), contains('hosted: ftp://mirror.example.com'));
+  });
 }

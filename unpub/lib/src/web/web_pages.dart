@@ -167,7 +167,13 @@ final class WebPages {
   }
 
   String _dependencySnippet(String name, String version, Uri server) =>
-      'dependencies:\n  $name:\n    hosted: ${server.origin}\n    version: ^$version';
+      'dependencies:\n  $name:\n    hosted: ${_hostedUrl(server)}\n    version: ^$version';
+
+  /// The URL that `hosted:` takes for [server]: its scheme, host and port.
+  /// Uri.origin would throw for a scheme other than http(s), which a
+  /// proxy-origin header can give when no proxy origin is configured.
+  String _hostedUrl(Uri server) =>
+      Uri(scheme: server.scheme, host: server.host, port: server.hasPort ? server.port : null).toString();
 
   String _about(Map<String, dynamic> pubspec) {
     final description = pubspec['description'];
