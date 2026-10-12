@@ -87,4 +87,24 @@ void main() {
     );
     expect(cancelled.single(), isTrue);
   });
+
+  test('uploads an archive with a signed request for its object', () async {
+    final requests = <AWSHttpRequest>[];
+    final worker = AwsS3Worker(
+      http: MockAWSHttpClient((request, isCancelled) {
+        requests.add(request);
+        return AWSHttpResponse(statusCode: 200);
+      }),
+      region: 'eu-west-1',
+      bucket: 'packages',
+      timeout: const Duration(seconds: 30),
+    );
+
+    await worker.upload(name: 'acme_ui', version: '1.0.0', content: [1, 2, 3], credentials: _credentials);
+
+    expect(requests.single.method, AWSHttpMethod.put);
+    expect(requests.single.uri, Uri.parse('https://s3.eu-west-1.amazonaws.com/packages/acme_ui-1.0.0.tar.gz'));
+    expect(requests.single.bodyBytes, [1, 2, 3]);
+    expect(requests.single.headers['authorization'], startsWith('AWS4-HMAC-SHA256 '));
+  });
 }

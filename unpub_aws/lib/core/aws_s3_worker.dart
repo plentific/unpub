@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:aws_common/aws_common.dart';
 import 'package:aws_signature_v4/aws_signature_v4.dart';
@@ -28,10 +27,7 @@ final class AwsS3Worker {
     required List<int> content,
     required AwsCredentials credentials,
   }) async {
-    final request = AWSStreamedHttpRequest.put(
-      _objectUri(name, version),
-      body: Stream.value(Uint8List.fromList(content)),
-    );
+    final request = AWSStreamedHttpRequest.put(_objectUri(name, version), body: Stream.value(content));
     final signedRequest = await _signRequest(credentials: credentials, request: request);
     final response = await _send(signedRequest);
     if (response.statusCode != HttpStatus.ok) {

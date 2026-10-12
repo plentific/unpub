@@ -288,7 +288,9 @@ class App {
         fileData = part;
       }
 
-      var bb = await fileData!.fold(BytesBuilder(), (BytesBuilder byteBuilder, d) => byteBuilder..add(d));
+      // Keeps the parts instead of copying each, so the archive is copied
+      // once, by takeBytes.
+      var bb = await fileData!.fold(BytesBuilder(copy: false), (BytesBuilder byteBuilder, d) => byteBuilder..add(d));
       var tarballBytes = bb.takeBytes();
       var tarBytes = switch (unpacker.unpack(tarballBytes)) {
         GunzippedBytes(:final bytes) => bytes,
