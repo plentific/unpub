@@ -63,8 +63,8 @@ final class _SessionlessServer {
 }
 
 void main() {
-  // mongo_dart from pub.dev fails this with a type error until a release
-  // includes mongo-dart/mongo_dart#408; the Plentific fork has it.
+  // mongo_dart before 0.10.10 failed this with a type error
+  // (mongo-dart/mongo_dart#408).
   test('connects to a server that leaves logicalSessionTimeoutMinutes out of its hello', () async {
     final server = _SessionlessServer(await ServerSocket.bind('127.0.0.1', 0));
     addTearDown(server.close);
