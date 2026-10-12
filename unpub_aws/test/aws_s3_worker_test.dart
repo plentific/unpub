@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:aws_common/aws_common.dart';
 import 'package:aws_common/testing.dart';
 import 'package:test/test.dart';
@@ -22,6 +24,7 @@ void main() {
       }),
       region: 'eu-west-1',
       bucket: 'packages',
+      timeout: const Duration(seconds: 30),
     );
 
     final archive = await worker.download(name: 'acme_ui', version: '1.0.0+1', credentials: _credentials);
@@ -38,6 +41,7 @@ void main() {
       http: MockAWSHttpClient((request, isCancelled) => AWSHttpResponse(statusCode: 404)),
       region: 'eu-west-1',
       bucket: 'packages',
+      timeout: const Duration(seconds: 30),
     );
 
     expect(await worker.download(name: 'acme_ui', version: '1.0.0', credentials: _credentials), isA<ArchiveMissing>());
@@ -50,6 +54,7 @@ void main() {
       ),
       region: 'eu-west-1',
       bucket: 'packages',
+      timeout: const Duration(seconds: 30),
     );
 
     expect(
@@ -60,5 +65,26 @@ void main() {
         allOf(contains('403'), contains('AccessDenied')),
       ),
     );
+  });
+
+  test('answers unavailable and cancels the request when S3 does not answer in time', () async {
+    final cancelled = <bool Function()>[];
+    final worker = AwsS3Worker(
+      http: MockAWSHttpClient((request, isCancelled) {
+        cancelled.add(isCancelled);
+        return Completer<AWSBaseHttpResponse>().future;
+      }),
+      region: 'eu-west-1',
+      bucket: 'packages',
+      timeout: const Duration(milliseconds: 10),
+    );
+
+    final archive = await worker.download(name: 'acme_ui', version: '1.0.0', credentials: _credentials);
+
+    expect(
+      archive,
+      isA<ArchiveUnavailable>().having((archive) => archive.reason, 'reason', contains('did not answer')),
+    );
+    expect(cancelled.single(), isTrue);
   });
 }

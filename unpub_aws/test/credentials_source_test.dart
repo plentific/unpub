@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
@@ -44,6 +45,7 @@ main() {
         return http.Response(_roleAssumed, 200);
       }),
       endpoint: endpoint,
+      timeout: const Duration(seconds: 30),
       webIdentity: AwsWebIdentity(
         roleArn: 'arn:aws:iam::000000000000:role/unpub',
         roleSessionName: 'unpubConnection',
@@ -85,6 +87,7 @@ main() {
     final source = StsWebIdentityCredentialsSource(
       http: MockClient((request) async => http.Response(_invalidIdentityToken, 400)),
       endpoint: endpoint,
+      timeout: const Duration(seconds: 30),
       webIdentity: AwsWebIdentity(
         roleArn: 'arn:aws:iam::000000000000:role/unpub',
         roleSessionName: 'unpubConnection',
@@ -108,6 +111,7 @@ main() {
         return http.Response(_roleAssumed, 200);
       }),
       endpoint: endpoint,
+      timeout: const Duration(seconds: 30),
       webIdentity: AwsWebIdentity(
         roleArn: 'arn:aws:iam::000000000000:role/unpub',
         roleSessionName: 'unpubConnection',
@@ -119,5 +123,22 @@ main() {
 
     expect(reply, isA<CredentialsRefused>());
     expect(requests, isEmpty);
+  });
+
+  test('answers refused when STS does not answer in time', () async {
+    final source = StsWebIdentityCredentialsSource(
+      http: MockClient((request) => Completer<http.Response>().future),
+      endpoint: endpoint,
+      timeout: const Duration(milliseconds: 10),
+      webIdentity: AwsWebIdentity(
+        roleArn: 'arn:aws:iam::000000000000:role/unpub',
+        roleSessionName: 'unpubConnection',
+        token: InlineWebIdentityToken('token'),
+      ),
+    );
+
+    final reply = await source.fetch();
+
+    expect(reply, isA<CredentialsRefused>().having((refused) => refused.reason, 'reason', contains('did not answer')));
   });
 }

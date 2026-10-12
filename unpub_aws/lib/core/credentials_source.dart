@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:http/http.dart' as http;
 import 'package:unpub_aws/core/aws_credentials.dart';
 import 'package:unpub_aws/core/aws_web_identity.dart';
@@ -33,21 +35,28 @@ final class StsWebIdentityCredentialsSource implements CredentialsSource {
   final http.Client _http;
   final Uri _endpoint;
   final AwsWebIdentity _webIdentity;
+  final Duration _timeout;
 
-  StsWebIdentityCredentialsSource({required this._http, required this._endpoint, required this._webIdentity});
+  StsWebIdentityCredentialsSource({
+    required this._http,
+    required this._endpoint,
+    required this._webIdentity,
+    required this._timeout,
+  });
 
-  /// Calls the regional STS endpoint of [region].
+  /// Calls the regional STS endpoint of [region], giving up after 30 seconds.
   factory StsWebIdentityCredentialsSource.inRegion({required String region, required AwsWebIdentity webIdentity}) =>
       StsWebIdentityCredentialsSource(
         http: http.Client(),
         endpoint: Uri.https('sts.$region.amazonaws.com', '/'),
         webIdentity: webIdentity,
+        timeout: const Duration(seconds: 30),
       );
 
   @override
   Future<CredentialsReply> fetch() async {
     try {
-      final response = await _http.post(
+      final request = _http.post(
         _endpoint,
         body: {
           'Action': 'AssumeRoleWithWebIdentity',
@@ -60,6 +69,7 @@ final class StsWebIdentityCredentialsSource implements CredentialsSource {
           },
         },
       );
+      final response = await request.timeout(_timeout);
       if (response.statusCode != 200) {
         return CredentialsRefused('STS answered ${response.statusCode}: ${response.body}');
       }
@@ -72,6 +82,10 @@ final class StsWebIdentityCredentialsSource implements CredentialsSource {
           expiration: DateTime.parse(_text(document, 'Expiration')),
         ),
       );
+    } on TimeoutException {
+      // Waiting on, a refresh would never finish nor be retried, and the
+      // credentials would expire an hour later.
+      return CredentialsRefused('STS did not answer within ${_timeout.inSeconds}s');
     } catch (e) {
       return CredentialsRefused('$e');
     }
